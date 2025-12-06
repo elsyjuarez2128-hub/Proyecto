@@ -55,105 +55,67 @@ cd -MiComunidad-App-UTNG
 ### 🔧 Sincronizar dependencias con Gradle  
 ### ▶️ Ejecutar la app en un emulador o dispositivo Android
 ---
-### Estructura del proyecto
-MyComunidad-App-UTNG/
-├── app/
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/mx/edu/utng/mrs/mycomunidad/
-│   │   │   │   ├── datos/
-│   │   │   │   │   ├── fuente_datos/
-│   │   │   │   │   ├── modelo/
-│   │   │   │   │   └── repositorio/
-│   │   │   │   ├── di/
-│   │   │   │   │   ├── ModuloAplicacion.kt
-│   │   │   │   │   └── ModuloUbicacion.kt
-│   │   │   │   ├── dominio/
-│   │   │   │   │   └── casos_uso/
-│   │   │   │   │       ├── CasoUsoAutenticacion.kt
-│   │   │   │   │       ├── CasoUsoReportes.kt
-│   │   │   │   │       └── CasoUsoUsuario.kt
-│   │   │   │   ├── presentacion/
-│   │   │   │   │   ├── componentes/
-│   │   │   │   │   │   ├── BotonCarga.kt
-│   │   │   │   │   │   ├── CampoTextoPersonalizado.kt
-│   │   │   │   │   │   ├── ComponentesEstadisticas.kt
-│   │   │   │   │   │   ├── DialogoComentario.kt
-│   │   │   │   │   │   ├── DialogoError.kt
-│   │   │   │   │   │   ├── FiltrosEstadisticas.kt
-│   │   │   │   │   │   ├── FondoConDegradado.kt
-│   │   │   │   │   │   ├── SeccionComentarios.kt
-│   │   │   │   │   │   ├── SelectorImagenes.kt
-│   │   │   │   │   │   └── TarjetaReporte.kt
-│   │   │   │   │   ├── navegacion/
-│   │   │   │   │   │   ├── NavegacionPrincipal.kt
-│   │   │   │   │   │   └── Rutas.kt
-│   │   │   │   │   ├── pantallas/
-│   │   │   │   │   │   ├── administrador/
-│   │   │   │   │   │   │   ├── PantallaGestionUsuario.kt
-│   │   │   │   │   │   │   ├── PantallaPanelAdministrador.kt
-│   │   │   │   │   │   │   ├── PantallaPerfilAdministrador.kt
-│   │   │   │   │   │   │   ├── PantallaReportesAprobados.kt
-│   │   │   │   │   │   │   └── PantallaValidacionReportes.kt
-│   │   │   │   │   │   └── visitante/
-│   │   │   │   │   │       ├── MapaSeleccionUbicacion.kt
-│   │   │   │   │   │       ├── MisReportes.kt
-│   │   │   │   │   │       ├── PantallaBienvenida.kt
-│   │   │   │   │   │       ├── PantallaCrearReporte.kt
-│   │   │   │   │   │       ├── PantallaDetalleReporte.kt
-│   │   │   │   │   │       ├── PantallaEditarReporte.kt
-│   │   │   │   │   │       ├── PantallaEliminarCuenta.kt
-│   │   │   │   │   │       ├── PantallaEstadisticas.kt
-│   │   │   │   │   │       ├── PantallaInicioSesion.kt
-│   │   │   │   │   │       ├── PantallaInputCoordenadas.kt
-│   │   │   │   │   │       ├── PantallaListaReportes.kt
-│   │   │   │   │   │       ├── PantallaMapa.kt
-│   │   │   │   │   │       ├── PantallaMapaPublico.kt
-│   │   │   │   │   │       ├── PantallaNotificaciones.kt
-│   │   │   │   │   │       ├── PantallaPrincipal.kt
-│   │   │   │   │   │       ├── PantallaRegistro.kt
-│   │   │   │   │   │       └── PantallaReportesPublicos.kt
-│   │   │   │   │   ├── tema/
-│   │   │   │   │   │   ├── Colores.kt
-│   │   │   │   │   │   ├── Tema.kt
-│   │   │   │   │   │   └── Tipografia.kt
-│   │   │   │   │   ├── viewmodel/
-│   │   │   │   │   │   ├── EditarReporteViewModel.kt
-│   │   │   │   │   │   ├── EstadosUI.kt
-│   │   │   │   │   │   ├── MisReportesViewModel.kt
-│   │   │   │   │   │   ├── ViewModelAdministrador.kt
-│   │   │   │   │   │   ├── ViewModelAutenticacion.kt
-│   │   │   │   │   │   ├── ViewModelComentarios.kt
-│   │   │   │   │   │   ├── ViewModelCrearReporte.kt
-│   │   │   │   │   │   ├── ViewModelDetalleReporte.kt
-│   │   │   │   │   │   ├── ViewModelEstadisticas.kt
-│   │   │   │   │   │   ├── ViewModelGestionUsuarios.kt
-│   │   │   │   │   │   ├── ViewModelMapa.kt
-│   │   │   │   │   │   ├── ViewModelMapaPublico.kt
-│   │   │   │   │   │   ├── ViewModelNotificaciones.kt
-│   │   │   │   │   │   ├── ViewModelPerfil.kt
-│   │   │   │   │   │   ├── ViewModelReportes.kt
-│   │   │   │   │   │   ├── ViewModelReportesPublicos.kt
-│   │   │   │   │   │   └── ViewModelSeleccionUbicacion.kt
-│   │   │   │   │   ├── servicios/
-│   │   │   │   │   │   ├── AdministradorNotificaciones.kt
-│   │   │   │   │   │   ├── ServicioNotificaciones.kt
-│   │   │   │   │   │   ├── ServicioNotificacionesFirestore.kt
-│   │   │   │   │   │   ├── ServicioUbicacion.kt
-│   │   │   │   │   │   └── UbicacionManager.kt
-│   │   │   │   │   ├── utilidades/
-│   │   │   │   │   │   ├── AlmacenamientoSeguro.kt
-│   │   │   │   │   │   ├── FormateadorTiempo.kt
-│   │   │   │   │   │   ├── GradientUtils.kt
-│   │   │   │   │   │   ├── ManejadorCamara.kt
-│   │   │   │   │   │   └── ManejadorMapas.kt
-│   │   │   │   │   ├── MainActivity.kt
-│   │   │   │   │   └── MyComunidadApplication.kt
-│   │   │   ├── res/
-│   │   │   └── AndroidManifest.xml
-│   │   └── build.gradle.kts
-├── docs/
-│   ├── screenshots/
-│   └── pruebas-usuarios/
-├── .gitignore
-└── README.md
+
+## 📁 Estructura de Paquetes
+### **1. Capa de Datos (`datos/`)**
+```kotlin
+app/src/main/java/mx/edu/utng/mrs/mycomunidad/
+datos/
+├── fuente_datos/     # Conexiones a Firebase/Firestore
+├── modelo/           # Entidades de datos
+└── repositorio/      # Implementación de repositorios
+
+Inyección de Dependencias (di/)
+kotlin
+di/
+├── ModuloAplicacion.kt    # Módulo principal de Hilt/Dagger
+└── ModuloUbicacion.kt     # Módulo para servicios de ubicación
+
+Capa de Dominio (dominio/)
+kotlin
+dominio/casos_uso/
+├── CasoUsoAutenticacion.kt    # Lógica de login/registro
+├── CasoUsoReportes.kt         # Operaciones con reportes
+└── CasoUsoUsuario.kt          # Gestión de perfiles
+
+Capa de Presentación (presentacion/)
+kotlin
+presentacion/
+├── componentes/          # Componentes UI reutilizables
+├── navegacion/          # Navegación entre pantallas
+├── pantallas/           # Todas las pantallas de la app
+│   ├── administrador/   # Pantallas para administradores
+│   └── visitante/       # Pantallas para usuarios
+├── tema/                # Temas, colores y tipografía
+├── viewmodel/           # ViewModels para cada pantalla
+├── servicios/           # Servicios en segundo plano
+└── utilidades/          # Utilidades y helpers
+
+
+# 🏫 MyComunidad - Aplicación Móvil para la UTNG
+
+[![Kotlin](https://img.shields.io/badge/Kotlin-1.9.0-blue.svg)](https://kotlinlang.org)
+[![Android](https://img.shields.io/badge/Android-API_24+-green.svg)](https://developer.android.com)
+[![License](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](LICENSE)
+[![Estado](https://img.shields.io/badge/Estado-En%20Producción-success.svg)]()
+
+## 📱 Descripción
+
+**MyComunidad** 
+Es una aplicación móvil desarrollada para la comunidad estudiantil de la Universidad Tecnológica del Norte de Guanajuato (UTNG). 
+La aplicación facilita la gestión de reportes, comunicación entre estudiantes y administración de incidencias dentro del campus.
+
+## ✨ Características Principales
+
+### 👤 Para Estudiantes
+- 📝 **Creación de reportes** con fotos y ubicación
+- 🗺️ **Mapa interactivo** de incidencias del campus
+- 🔔 **Notificaciones en tiempo real**
+- 📊 **Estadísticas** de reportes por categoría
+- 👥 **Comentarios** en reportes públicos
+
+### 👨‍💼 Para Administradores
+- ✅ **Validación de reportes** pendientes
+- 👥 **Gestión de usuarios** y permisos
+- 📈 **Panel de administración** con métricas
+- 🔧 **Aprobación/Rechazo** de reportes
