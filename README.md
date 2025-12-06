@@ -50,4 +50,110 @@ MiComunidad-App-UTNG es una aplicación móvil desarrollada en Kotlin / Android 
 git clone https://github.com/1224100827mrs-gif/-MiComunidad-App-UTNG.git
 cd -MiComunidad-App-UTNG
 # Abrir el proyecto con Android Studio
+```
 
+### 🔧 Sincronizar dependencias con Gradle  
+### ▶️ Ejecutar la app en un emulador o dispositivo Android
+---
+### Estructura del proyecto
+MyComunidad-App-UTNG/
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/mx/edu/utng/mrs/mycomunidad/
+│   │   │   │   ├── datos/
+│   │   │   │   │   ├── fuente_datos/
+│   │   │   │   │   ├── modelo/
+│   │   │   │   │   └── repositorio/
+│   │   │   │   ├── di/
+│   │   │   │   │   ├── ModuloAplicacion.kt
+│   │   │   │   │   └── ModuloUbicacion.kt
+│   │   │   │   ├── dominio/
+│   │   │   │   │   └── casos_uso/
+│   │   │   │   │       ├── CasoUsoAutenticacion.kt
+│   │   │   │   │       ├── CasoUsoReportes.kt
+│   │   │   │   │       └── CasoUsoUsuario.kt
+│   │   │   │   ├── presentacion/
+│   │   │   │   │   ├── componentes/
+│   │   │   │   │   │   ├── BotonCarga.kt
+│   │   │   │   │   │   ├── CampoTextoPersonalizado.kt
+│   │   │   │   │   │   ├── ComponentesEstadisticas.kt
+│   │   │   │   │   │   ├── DialogoComentario.kt
+│   │   │   │   │   │   ├── DialogoError.kt
+│   │   │   │   │   │   ├── FiltrosEstadisticas.kt
+│   │   │   │   │   │   ├── FondoConDegradado.kt
+│   │   │   │   │   │   ├── SeccionComentarios.kt
+│   │   │   │   │   │   ├── SelectorImagenes.kt
+│   │   │   │   │   │   └── TarjetaReporte.kt
+│   │   │   │   │   ├── navegacion/
+│   │   │   │   │   │   ├── NavegacionPrincipal.kt
+│   │   │   │   │   │   └── Rutas.kt
+│   │   │   │   │   ├── pantallas/
+│   │   │   │   │   │   ├── administrador/
+│   │   │   │   │   │   │   ├── PantallaGestionUsuario.kt
+│   │   │   │   │   │   │   ├── PantallaPanelAdministrador.kt
+│   │   │   │   │   │   │   ├── PantallaPerfilAdministrador.kt
+│   │   │   │   │   │   │   ├── PantallaReportesAprobados.kt
+│   │   │   │   │   │   │   └── PantallaValidacionReportes.kt
+│   │   │   │   │   │   └── visitante/
+│   │   │   │   │   │       ├── MapaSeleccionUbicacion.kt
+│   │   │   │   │   │       ├── MisReportes.kt
+│   │   │   │   │   │       ├── PantallaBienvenida.kt
+│   │   │   │   │   │       ├── PantallaCrearReporte.kt
+│   │   │   │   │   │       ├── PantallaDetalleReporte.kt
+│   │   │   │   │   │       ├── PantallaEditarReporte.kt
+│   │   │   │   │   │       ├── PantallaEliminarCuenta.kt
+│   │   │   │   │   │       ├── PantallaEstadisticas.kt
+│   │   │   │   │   │       ├── PantallaInicioSesion.kt
+│   │   │   │   │   │       ├── PantallaInputCoordenadas.kt
+│   │   │   │   │   │       ├── PantallaListaReportes.kt
+│   │   │   │   │   │       ├── PantallaMapa.kt
+│   │   │   │   │   │       ├── PantallaMapaPublico.kt
+│   │   │   │   │   │       ├── PantallaNotificaciones.kt
+│   │   │   │   │   │       ├── PantallaPrincipal.kt
+│   │   │   │   │   │       ├── PantallaRegistro.kt
+│   │   │   │   │   │       └── PantallaReportesPublicos.kt
+│   │   │   │   │   ├── tema/
+│   │   │   │   │   │   ├── Colores.kt
+│   │   │   │   │   │   ├── Tema.kt
+│   │   │   │   │   │   └── Tipografia.kt
+│   │   │   │   │   ├── viewmodel/
+│   │   │   │   │   │   ├── EditarReporteViewModel.kt
+│   │   │   │   │   │   ├── EstadosUI.kt
+│   │   │   │   │   │   ├── MisReportesViewModel.kt
+│   │   │   │   │   │   ├── ViewModelAdministrador.kt
+│   │   │   │   │   │   ├── ViewModelAutenticacion.kt
+│   │   │   │   │   │   ├── ViewModelComentarios.kt
+│   │   │   │   │   │   ├── ViewModelCrearReporte.kt
+│   │   │   │   │   │   ├── ViewModelDetalleReporte.kt
+│   │   │   │   │   │   ├── ViewModelEstadisticas.kt
+│   │   │   │   │   │   ├── ViewModelGestionUsuarios.kt
+│   │   │   │   │   │   ├── ViewModelMapa.kt
+│   │   │   │   │   │   ├── ViewModelMapaPublico.kt
+│   │   │   │   │   │   ├── ViewModelNotificaciones.kt
+│   │   │   │   │   │   ├── ViewModelPerfil.kt
+│   │   │   │   │   │   ├── ViewModelReportes.kt
+│   │   │   │   │   │   ├── ViewModelReportesPublicos.kt
+│   │   │   │   │   │   └── ViewModelSeleccionUbicacion.kt
+│   │   │   │   │   ├── servicios/
+│   │   │   │   │   │   ├── AdministradorNotificaciones.kt
+│   │   │   │   │   │   ├── ServicioNotificaciones.kt
+│   │   │   │   │   │   ├── ServicioNotificacionesFirestore.kt
+│   │   │   │   │   │   ├── ServicioUbicacion.kt
+│   │   │   │   │   │   └── UbicacionManager.kt
+│   │   │   │   │   ├── utilidades/
+│   │   │   │   │   │   ├── AlmacenamientoSeguro.kt
+│   │   │   │   │   │   ├── FormateadorTiempo.kt
+│   │   │   │   │   │   ├── GradientUtils.kt
+│   │   │   │   │   │   ├── ManejadorCamara.kt
+│   │   │   │   │   │   └── ManejadorMapas.kt
+│   │   │   │   │   ├── MainActivity.kt
+│   │   │   │   │   └── MyComunidadApplication.kt
+│   │   │   ├── res/
+│   │   │   └── AndroidManifest.xml
+│   │   └── build.gradle.kts
+├── docs/
+│   ├── screenshots/
+│   └── pruebas-usuarios/
+├── .gitignore
+└── README.md
