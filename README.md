@@ -1,23 +1,30 @@
 # 📱 PROYECTO: MyComunidad App UTNG
 # MiComunidad-App-UTNG  
-> Aplicación Android para reportes comunitarios — UTNG  
+Aplicación Android para reportes comunitarios — UTNG  
 
----
 
-## Tabla de contenido  
 
-1. [Descripción del proyecto](#descripción-del-proyecto)  
-2. [Características principales](#características-principales)  
-3. [Tecnologías usadas](#tecnologías-usadas)  
-4. [Instalación / Cómo ejecutar](#instalación--cómo-ejecutar)  
-5. [Estructura del proyecto](#estructura-del-proyecto)  
-6. [Uso / Flujo de la aplicación](#uso--flujo-de-la-aplicación)  
-7. [Guía para contribuidores](#guía-para-contribuidores)  
-8. [Screenshots](#screenshots)  
-9. [Licencia](#licencia)  
-10. [Autores / Mantenedores](#autores--mantenedores)  
+# 📑 Índice
 
----
+Descripción del proyecto
+
+Características principales
+
+Tecnologías usadas
+
+Instalación / Cómo ejecutar
+
+Estructura del proyecto
+
+Uso / Flujo de la aplicación
+
+Guía para contribuidores
+
+Screenshots
+
+Licencia
+
+Autores / Mantenedores
 
 ## Descripción del proyecto  
 
@@ -26,42 +33,73 @@ MiComunidad-App-UTNG es una aplicación móvil desarrollada en Kotlin / Android 
 ---
 
 ## Características principales  
+Características principales
 
-- Creación de reportes comunitarios desde la app (incidencias, sugerencias, etc.).  
-- Formulario para completar datos del reporte (título, descripción, categoría, ubicación, imagen, etc.).  
-- Persistencia / almacenamiento de reportes (local / remoto — según implementación).  
-- Interfaz amigable y fácil de usar.  
-- Posibilidad de configurar datos de usuario / sesión (si aplica).  
-- ... *(añadir las funcionalidades reales de tu app)*  
+📍 Reportar problemas mediante formulario con descripción, fotografía y ubicación.
 
+🗺️ Visualización de reportes en mapa mediante Google Maps.
+
+📸 Subida de imágenes desde galería o cámara.
+
+🔐 Autenticación de usuario (según versión del proyecto).
+
+📨 Notificación de reportes enviados.
+
+🗂️ Historial de reportes realizados por el usuario.
 ---
 
-## Tecnologías usadas  
+# 🛠️ Tecnologías usadas
+Frontend / App
 
-- Kotlin / Android (Android Studio, Gradle)  
-- Android SDK / Jetpack (o libraries que uses)  
-- *(añadir librerías externas, dependencias, versiones, etc.)*  
+Android Studio (Java/Kotlin según tu proyecto)
 
----
+XML para interfaces
 
-## Instalación / Cómo ejecutar  
+Google Maps API
 
-```bash
-git clone https://github.com/1224100827mrs-gif/-MiComunidad-App-UTNG.git
-cd -MiComunidad-App-UTNG
-# Abrir el proyecto con Android Studio
-```
+Firebase Storage (si lo usas para imágenes)
 
-### 🔧 Sincronizar dependencias con Gradle  
-### ▶️ Ejecutar la app en un emulador o dispositivo Android
----
+Firebase Authentication / Firestore (si aplica)
+
+Backend
+
+API REST (si existiera en el proyecto)
+
+Firebase Realtime Database o Firestore (según integración)
+
+
+# 🚀 Instalación / Cómo ejecutar
+1. Clonar repositorio
+   git clone https://github.com/1224100827mrs-gif/-MiComunidad-App-UTNG.git
+2. Abrir el proyecto
+
+Abrir Android Studio
+
+Seleccionar Open an existing project
+
+Elegir la carpeta del repositorio
+
+3. Configurar APIs (si aplica)
+
+Crear archivo google-services.json
+
+Activar APIs de Google Maps
+
+Configurar Firebase (Authentication, Firestore, Storage)
+
+4. Ejecutar
+
+Conectar un dispositivo físico o usar un emulador
+
+Presionar ▶️ Run
 
 ## 📁 Estructura de Paquetes
 ### **1. Capa de Datos (`datos/`)**
 ```kotlin
 app/src/main/java/mx/edu/utng/mrs/mycomunidad/
 datos/
-├── fuente_datos/     # Conexiones a Firebase/Firestore
+├── fuente_datos/
+                      # Conexiones a Firebase/Firestore
 ├── modelo/           # Entidades de datos
 └── repositorio/      # Implementación de repositorios
 
@@ -92,30 +130,129 @@ presentacion/
 └── utilidades/          # Utilidades y helpers
 
 
-# 🏫 MyComunidad - Aplicación Móvil para la UTNG
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-1.9.0-blue.svg)](https://kotlinlang.org)
-[![Android](https://img.shields.io/badge/Android-API_24+-green.svg)](https://developer.android.com)
-[![License](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](LICENSE)
-[![Estado](https://img.shields.io/badge/Estado-En%20Producción-success.svg)]()
+FASE 1: Configuración Inicial del Proyecto
+Paso 1: Estructura Base y Archivos Esenciales
+Modelos de Datos
 
-## 📱 Descripción
+├── datos
+├── fuente_datos
+│   └── ServicioFirebase
+├── Modelo
+│   ├── Comentario.kt
+│   ├── Notificasiones.kt
+│   ├── Reportes.kt
+│   ├── Ubicasion.kt
+│   └── Usuario.kt
+├── Respositorio
+│   ├── RepositorioAutenticacion.kt
+│   ├── ResopitorioCompentario.kt
+│   ├── RespositorioNotificasiones.kt
+│   ├── RepositorioReportes.kt
+│   └── RepositorioUsuaio.kt
+├── Crear di
+│   ├── ModuloUbicacion.kt
+│   └── ModuloApplicacion.kt
+├── Crear Dominio
+├── Caso_uso
+│   ├── CasoUsoAutenticasion.kt
+│   ├── CasoUsoReportes.kt
+│   └── CasoUsoUsuario.kt
+├── Crear presentacion
+├── Componentes
+│   ├── BotonCarga.kt
+│   ├── CampoTextoPerzonalizado.kt
+│   ├── ComponentesEstadisticas.kt
+│   ├── DialogoComentario.kt
+│   ├── DialogoError.kt
+│   ├── Filtros.Estadisticas.kt
+│   ├── FondoconDegradado.kt
+│   ├── SeccionComentario.kt
+│   ├── SelectorImagenes.kt
+│   └── TarjetaReportes.kt
+├── navegacion
+│   ├── NavegacionPrincipal.kt
+│   └── Rutas.kt
+├── pantallas
+├── administrador
+│   ├── PantallaGestionUsuaio.kt
+│   ├── PantallaPanelAdministrador.kt
+│   ├── PantallaPerfilAdminitrador.kt
+│   ├── PantallaReportesAprobado.kt
+│   └── PantallaValidacionReportes.kt
+├── visitante
+│   ├── MapaSeleccionUbicacion.kt
+│   ├── MisReportes.kt
+│   ├── PantallaBienvenida.kt
+│   ├── PantallaCraerReportes.kt
+│   ├── PantallaDetalleReportes.kt
+│   ├── PantllaEditarReportes.kt
+│   ├── PantallaEliminarCuenta.kt
+│   ├── PantallaEstadisticas.kt
+│   ├── PantallaInicioSesion.kt
+│   ├── PantllaInpotCoordenas.kt
+│   ├── PantallaListasReportes.kt
+│   ├── PantallaMapa.kt
+│   ├── PantallaMapaPublico.kt
+│   ├── PantallaNotificasiones.kt
+│   ├── PantallaPrincipal.kt
+│   ├── PantallaRegistro.kt
+│   └── PantallaReportesPublicos.kt
+├── tema
+│   ├── Colores.kt
+│   ├── Tema.kt
+│   └── Tipografia.kt
+├── viewmodel
+│   ├── EditarReporte.kt
+│   ├── EstadosUi.kt
+│   ├── MisReportes.kt
+│   ├── ViewModelAdministrador.kt
+│   ├── ViewModelAutenticacion.kt
+│   ├── ViewModelComentarios.kt
+│   ├── ViewModelCrearReporetes.kt
+│   ├── ViewModelDetalleReaporte.kt
+│   ├── ViewModelEstadisticas.kt
+│   ├── ViewModelGestionUsuaios.kt
+│   ├── ViewModelMapa.kt
+│   ├── ViewModelMapaPublico.kt
+│   ├── ViewModelNotificasiones.kt
+│   ├── ViewModelPerfil.kt
+│   ├── ViewModelReportes.kt
+│   ├── ViewModelReportesPublicos.kt
+│   └── ViewModelSeleccionesUbicasion.kt
+├── servicios
+│   ├── AdminitradorNotificasiones.kt
+│   ├── ServiciosNotificasiones.kt
+│   ├── ServiciosNotofocasionesFirestore.kt
+│   ├── ServicioUbicasion.kt
+│   └── UbicasionManager.kt
+├── utilidades
+│   ├── AlmacenamientoSeguro.kt
+│   ├── FormateadorTiempo.kt
+│   ├── GradientUtils.kt
+│   ├── ManejadorCamara.kt
+│   ├── ManejadorMapas.kt
+│   ├── MainActivity.kt
+│   └── MyCominidadApplication.kt
 
-**MyComunidad** 
-Es una aplicación móvil desarrollada para la comunidad estudiantil de la Universidad Tecnológica del Norte de Guanajuato (UTNG). 
-La aplicación facilita la gestión de reportes, comunicación entre estudiantes y administración de incidencias dentro del campus.
+### Uso / Flujo de la aplicación
 
-## ✨ Características Principales
+El usuario ingresa a la app.
 
-### 👤 Para Estudiantes
-- 📝 **Creación de reportes** con fotos y ubicación
-- 🗺️ **Mapa interactivo** de incidencias del campus
-- 🔔 **Notificaciones en tiempo real**
-- 📊 **Estadísticas** de reportes por categoría
-- 👥 **Comentarios** en reportes públicos
+Selecciona "Reportar problema".
 
-### 👨‍💼 Para Administradores
-- ✅ **Validación de reportes** pendientes
-- 👥 **Gestión de usuarios** y permisos
-- 📈 **Panel de administración** con métricas
-- 🔧 **Aprobación/Rechazo** de reportes
+Agrega:
+
+Foto
+
+Descripción
+
+Tipo de problema
+
+Ubicación en el mapa
+
+El reporte se almacena en la base de datos.
+
+El usuario puede visualizar todos los reportes en Google Maps.
+
+Puede revisar su historial y estado de cada reporte.
