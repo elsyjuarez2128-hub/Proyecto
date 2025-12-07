@@ -1,0 +1,26 @@
+# Android/IntelliJ
+.gradle/
+local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# Build
+build/
+app/build/
+captures/
+output.json
+
+# Sign-in keys
+*.jks
+*.keystore
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Kotlin
+*.iml
