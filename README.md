@@ -22,8 +22,6 @@ Guía para contribuidores
 
 Screenshots
 
-Licencia
-
 Autores / Mantenedores
 
 ## Descripción del proyecto  
@@ -83,6 +81,9 @@ Conectar un dispositivo físico o usar un emulador
 Presionar
 
 ▶️ Run
+## Autores 
+- Marisol Rincon Solis
+- Elsy Joselyn Godinez Juarez 
 
 ## 📁 Estructura de Paquetes
 ### **1. Capa de Datos (`datos/`)**
