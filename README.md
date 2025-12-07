@@ -270,4 +270,2796 @@ git push origin feature-nueva-funcion
 # 🗺️ Mapa de Reportes
 --<img src="https://github.com/user-attachments/assets/3c461b6e-e4fd-4c0b-8cc8-8ce0d38afa5b" alt="Mapa de reportes" width="120">
 --
-# 
+# Comentarios Fuente con KDoc/JSDoc
+# 🟦 1. MyComunidadApplication.kt (KDoc para App)
+```
+package mx.edu.utng.mrs.mycomunidad
+
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+
+/**
+ * Clase principal de la aplicación Mi Comunidad.
+ * Se ejecuta antes que cualquier Activity y configura los módulos de dependencias,
+ * servicios globales y componentes compartidos por toda la app.
+ */
+@HiltAndroidApp
+class MyComunidadApplication : Application()
+
+/**
+ * Se ejecuta al iniciar la aplicación.
+ * Ideal para inicializar Koin/Hilt, Firebase o servicios globales.
+ */
+override fun onCreate() {
+    super.onCreate()
+}
+}
+```
+# 🟦 2. MainActivity.kt (KDoc para pantalla principal)
+```
+package mx.edu.utng.mrs.mycomunidad
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
+import androidx.navigation.compose.rememberNavController
+import com.google.firebase.firestore.FirebaseFirestore
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.fuente_datos.ServicioFirebase
+import mx.edu.utng.mrs.mycomunidad.presentacion.navegacion.NavegacionPrincipal
+import mx.edu.utng.mrs.mycomunidad.presentacion.tema.MyComunidadTheme
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAutenticacion
+import mx.edu.utng.mrs.mycomunidad.servicios.AdministradorNotificaciones
+import javax.inject.Inject
+
+
+/**
+ * Pantalla principal de la aplicación.
+ * Aquí se muestra el menú y las opciones principales para el usuario.
+ */
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+
+    private val viewModelAutenticacion: ViewModelAutenticacion by viewModels()
+
+    @Inject
+    lateinit var servicioFirebase: ServicioFirebase
+
+    @Inject
+    lateinit var administradorNotificaciones: AdministradorNotificaciones
+
+    companion object {
+        private const val TAG = "MainActivity"
+        const val PERMISO_UBICACION_OTORGADO = "permiso_ubicacion_otorgado"
+        const val PERMISO_NOTIFICACION_OTORGADO = "permiso_notificacion_otorgado"
+    }
+
+    // Permisos de ubicación
+    private val permisosUbicacion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        )
+    } else {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    }
+
+    // Permisos de notificaciones (Android 13+)
+    private val permisoNotificacion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.POST_NOTIFICATIONS
+    } else {
+        null
+    }
+
+    // Launcher para permisos de ubicación
+    private val requestLocationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permisos ->
+        val todosConcedidos = permisos.values.all { it }
+        if (todosConcedidos) {
+            Log.d(TAG, "✅ Todos los permisos de ubicación concedidos")
+            // Guardar en preferencias que los permisos fueron otorgados
+            getSharedPreferences("permisos", MODE_PRIVATE)
+                .edit()
+                .putBoolean(PERMISO_UBICACION_OTORGADO, true)
+                .apply()
+
+            // Inicializar servicios que requieren ubicación
+            inicializarServiciosUbicacion()
+        } else {
+            Log.w(TAG, "⚠️ Algunos permisos de ubicación fueron denegados: $permisos")
+            mostrarDialogoPermisosUbicacion()
+        }
+    }
+
+    // Launcher para permisos de notificaciones
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d(TAG, "✅ Permiso de notificaciones concedido")
+            getSharedPreferences("permisos", MODE_PRIVATE)
+                .edit()
+                .putBoolean(PERMISO_NOTIFICACION_OTORGADO, true)
+                .apply()
+
+            // Inicializar notificaciones ahora que tenemos permisos
+            inicializarSistemaNotificacionesCompleto()
+        } else {
+            Log.w(TAG, "⚠️ Permiso de notificaciones denegado")
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        configurarFirebaseLogs()
+
+        setContent {
+            MyComunidadTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.background
+                ) {
+                    val navController = rememberNavController()
+                    val coroutineScope = rememberCoroutineScope()
+
+                    LaunchedEffect(Unit) {
+                        // Inicializar servicios
+                        servicioFirebase.probarConexionFirebase()
+                        servicioFirebase.logEstadoFirebase()
+                        viewModelAutenticacion.cargarUsuarioActual()
+                        manejarNotificacionAlAbrir(intent)
+
+                        // Verificar y solicitar permisos
+                        coroutineScope.launch {
+                            verificarYSolicitarPermisos()
+                        }
+                    }
+
+                    NavegacionPrincipal(
+                        navController = navController,
+                        viewModelAutenticacion = viewModelAutenticacion
+                    )
+                }
+            }
+        }
+    }
+
+    private fun verificarYSolicitarPermisos() {
+        Log.d(TAG, "🔍 Verificando permisos...")
+
+        // 1. Verificar y solicitar permisos de notificaciones primero
+        if (permisoNotificacion != null && !tienePermisoNotificaciones()) {
+            Log.d(TAG, "📱 Permisos de notificación necesarios")
+            solicitarPermisosNotificaciones()
+        } else {
+            Log.d(TAG, "📱 Permisos de notificación ya concedidos o no requeridos")
+            // Inicializar notificaciones si ya tenemos permisos
+            inicializarSistemaNotificacionesCompleto()
+        }
+
+        // 2. Verificar permisos de ubicación
+        if (necesitaPermisosUbicacion()) {
+            Log.d(TAG, "📍 Permisos de ubicación necesarios")
+            solicitarPermisosUbicacion()
+        } else {
+            Log.d(TAG, "✅ Permisos de ubicación ya concedidos")
+            inicializarServiciosUbicacion()
+        }
+    }
+
+    private fun necesitaPermisosUbicacion(): Boolean {
+        return permisosUbicacion.any { permiso ->
+            ContextCompat.checkSelfPermission(this, permiso) != PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun tienePermisoNotificaciones(): Boolean {
+        return permisoNotificacion?.let { permiso ->
+            ContextCompat.checkSelfPermission(this, permiso) == PackageManager.PERMISSION_GRANTED
+        } ?: true // Para Android <13, siempre retorna true
+    }
+
+    private fun solicitarPermisosUbicacion() {
+        Log.d(TAG, "📍 Solicitando permisos de ubicación...")
+
+        // Verificar si debemos mostrar una explicación
+        val deberiaMostrarExplicacion = permisosUbicacion.any { permiso ->
+            shouldShowRequestPermissionRationale(permiso)
+        }
+
+        if (deberiaMostrarExplicacion) {
+            Log.d(TAG, "ℹ️ Mostrando explicación de permisos de ubicación")
+            mostrarDialogoExplicacionUbicacion()
+        } else {
+            // Solicitar permisos directamente
+            requestLocationPermissionLauncher.launch(permisosUbicacion)
+        }
+    }
+
+    private fun solicitarPermisosNotificaciones() {
+        Log.d(TAG, "🔔 Solicitando permisos de notificación...")
+
+        if (permisoNotificacion != null) {
+            val deberiaMostrarExplicacion = shouldShowRequestPermissionRationale(permisoNotificacion!!)
+
+            if (deberiaMostrarExplicacion) {
+                Log.d(TAG, "ℹ️ Mostrando explicación de permisos de notificación")
+                mostrarDialogoExplicacionNotificacion()
+            } else {
+                requestNotificationPermissionLauncher.launch(permisoNotificacion!!)
+            }
+        }
+    }
+
+    private fun inicializarServiciosUbicacion() {
+        Log.d(TAG, "🚀 Inicializando servicios de ubicación...")
+        // Aquí puedes inicializar servicios que requieren ubicación
+        // Por ejemplo: ServicioUbicacion.iniciarServicio(this)
+
+        // Puedes agregar más servicios de ubicación aquí
+        // Ejemplo: Geocoder inicialization, Location services, etc.
+    }
+
+    private fun inicializarSistemaNotificacionesCompleto() {
+        Log.d(TAG, "🔔 Iniciando sistema de notificaciones")
+
+        // Llamar al método existente en AdministradorNotificaciones
+        administradorNotificaciones.inicializarSistemaNotificaciones(this)
+
+        // Mostrar mensaje de éxito
+        Log.d(TAG, "✅ Sistema de notificaciones inicializado correctamente")
+    }
+
+    private fun configurarFirebaseLogs() {
+        try {
+            FirebaseFirestore.setLoggingEnabled(true)
+            val db = FirebaseFirestore.getInstance()
+            db.collection("usuarios").limit(1).get()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d("FIREBASE_DEBUG", "Conexión Firestore exitosa")
+                        Log.d("FIREBASE_DEBUG", "Documentos en 'usuarios': ${task.result?.size()}")
+                    } else {
+                        Log.e("FIREBASE_DEBUG", "Error Firestore: ${task.exception?.message}")
+                    }
+                }
+            Log.d("FIREBASE_DEBUG", "Logs de Firestore habilitados")
+        } catch (e: Exception) {
+            Log.e("FIREBASE_DEBUG", "Error configurando Firebase: ${e.message}")
+        }
+    }
+
+    private fun mostrarDialogoExplicacionUbicacion() {
+        // Aquí puedes mostrar un diálogo o snackbar explicando por qué necesitas ubicación
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Permisos de Ubicación Necesarios")
+            .setMessage("La aplicación necesita acceso a tu ubicación para:\n\n• Mostrar reportes cercanos\n• Permitirte crear reportes en tu ubicación actual\n• Filtrar reportes por proximidad\n• Mejorar la precisión de los reportes")
+            .setPositiveButton("Entendido") { _, _ ->
+                requestLocationPermissionLauncher.launch(permisosUbicacion)
+            }
+            .setNegativeButton("Cancelar") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun mostrarDialogoExplicacionNotificacion() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Permisos de Notificación")
+                .setMessage("Permite las notificaciones para recibir:\n\n• Actualizaciones sobre tus reportes\n• Alertas importantes de la comunidad\n• Notificaciones de nuevos comentarios\n• Estado de tus reportes enviados")
+                .setPositiveButton("Permitir") { _, _ ->
+                    requestNotificationPermissionLauncher.launch(permisoNotificacion!!)
+                }
+                .setNegativeButton("Ahora no") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .show()
+        }
+    }
+
+    private fun mostrarDialogoPermisosUbicacion() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Permisos de Ubicación Requeridos")
+            .setMessage("Para usar todas las funciones de la app, necesitas conceder permisos de ubicación.\n\nPuedes activarlos en:\nConfiguración > Aplicaciones > MyComunidad > Permisos > Ubicación")
+            .setPositiveButton("Ir a Configuración") { _, _ ->
+                val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = android.net.Uri.fromParts("package", packageName, null)
+                startActivity(intent)
+            }
+            .setNegativeButton("Cancelar") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setNeutralButton("Usar sin ubicación") { dialog, _ ->
+                dialog.dismiss()
+                // El usuario puede continuar sin permisos de ubicación
+                Log.d(TAG, "Usuario eligió continuar sin permisos de ubicación")
+            }
+            .show()
+    }
+
+    private fun manejarNotificacionAlAbrir(intent: Intent) {
+        val desdeNotificacion = intent.getBooleanExtra("desde_notificacion", false)
+        val tipoNotificacion = intent.getStringExtra("tipo_notificacion")
+        val reporteId = intent.getStringExtra("reporte_id")
+        val titulo = intent.getStringExtra("titulo")
+        val mensaje = intent.getStringExtra("mensaje")
+
+        if (desdeNotificacion) {
+            Log.d(TAG, "📱 App abierta desde notificación: tipo=$tipoNotificacion, reporteId=$reporteId, titulo=$titulo, mensaje=$mensaje")
+            if (!reporteId.isNullOrEmpty()) {
+                Log.d(TAG, "🚀 Intentando navegar al reporte: $reporteId")
+                // Aquí puedes navegar a la pantalla de detalles del reporte
+                // navController.navigate("detalle_reporte/$reporteId")
+            }
+        } else {
+            intent.extras?.let { extras ->
+                if (extras.containsKey("google.message_id") || extras.containsKey("gcm.message_id")) {
+                    val tipo = extras.getString("tipo")
+                    val tituloFcm = extras.getString("titulo")
+                    val mensajeFcm = extras.getString("mensaje")
+                    val reporteIdFcm = extras.getString("reporteId")
+                    Log.d(TAG, "📨 Datos FCM: tipo=$tipo, titulo=$tituloFcm, mensaje=$mensajeFcm, reporteId=$reporteIdFcm")
+                }
+            }
+        }
+
+        intent.action?.let { action -> Log.d(TAG, "Action del intent: $action") }
+    }
+
+    // Métodos públicos para uso desde otras partes de la app
+    fun probarNotificacionManual() {
+        administradorNotificaciones.probarNotificacionLocal(this)
+    }
+
+    fun verificarPermisosUbicacionEnTiempoReal(): Boolean {
+        return !necesitaPermisosUbicacion()
+    }
+
+    fun solicitarPermisosUbicacionManual() {
+        solicitarPermisosUbicacion()
+    }
+
+    fun verificarPermisosNotificacionesEnTiempoReal(): Boolean {
+        return tienePermisoNotificaciones()
+    }
+
+    fun solicitarPermisosNotificacionesManual() {
+        solicitarPermisosNotificaciones()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { manejarNotificacionAlAbrir(it) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        servicioFirebase.verificarEstadoFirebase()
+
+        // Re-verificar permisos cuando la app vuelve al frente
+        if (necesitaPermisosUbicacion()) {
+            Log.d(TAG, "📍 Re-verificando permisos de ubicación en onResume")
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Log.d(TAG, "🚀 MainActivity iniciada")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Log.d(TAG, "⏸️ MainActivity en segundo plano")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d(TAG, "❌ MainActivity destruida")
+    }
+
+    // Función para mostrar notificación desde cualquier lugar
+    fun mostrarNotificacion(
+        titulo: String,
+        mensaje: String,
+        tipo: String = "general",
+        reporteId: String = ""
+    ) {
+        administradorNotificaciones.mostrarNotificacion(
+            context = this,
+            titulo = titulo,
+            mensaje = mensaje,
+            tipo = tipo,
+            reporteId = reporteId
+        )
+    }
+}
+```
+# Datos - Fuente de Datos
+# ServiceFirebase.kt
+package mx.edu.utng.mrs.mycomunidad.datos.fuente_datos
+
+import android.content.Context
+import android.util.Log
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
+import com.google.firebase.storage.FirebaseStorage
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Servicio principal de Firebase que maneja la conexión con Firestore y Authentication
+ *
+ * @property firestore Instancia de Firebase Firestore para operaciones de base de datos
+ * @property auth Instancia de Firebase Authentication para manejo de usuarios
+ */
+@Singleton
+class ServicioFirebase @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+    // Firestore normal
+    val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
+
+    // Storage CORREGIDO - Usando el bucket correcto del google-services.json
+    val storage: FirebaseStorage by lazy {
+        FirebaseStorage.getInstance()
+        // Esto usará automáticamente: gs://mi-comunidad-utng.firebasestorage.app
+    }
+
+    // ✅ CORREGIDO: Función para probar la conexión con Firebase
+    fun probarConexionFirebase() {
+        try {
+            // Probar Firestore
+            val db = Firebase.firestore
+            Log.d("FirebaseTest", "✅ Firestore conectado correctamente")
+
+            // Probar Storage
+            val storageRef = storage.reference
+            Log.d("FirebaseTest", "✅ Storage conectado correctamente")
+            Log.d("FirebaseTest", "📦 Bucket: ${storage.app.options.storageBucket}")
+
+            // ✅ CORREGIDO: Usar tipos explícitos en el mapOf
+            val testData = hashMapOf<String, Any>(
+                "timestamp" to System.currentTimeMillis(),
+                "test_type" to "connection_test",
+                "app_name" to "MiComunidad"
+            )
+
+            // Intentar una operación simple de Firestore
+            db.collection("test").document("connection")
+                .set(testData)
+                .addOnSuccessListener {
+                    Log.d("FirebaseTest", "✅ Escritura en Firestore exitosa")
+                }
+                .addOnFailureListener { e ->
+                    Log.w("FirebaseTest", "⚠️ Escritura en Firestore falló: ${e.message}")
+                }
+
+        } catch (e: Exception) {
+            Log.e("FirebaseTest", "❌ Error conectando Firebase: ${e.message}")
+        }
+    }
+
+    // ✅ CORREGIDO: Función para verificar si Firebase está inicializado
+    fun verificarEstadoFirebase(): Boolean {
+        return try {
+            // Intentar acceder a Firestore
+            Firebase.firestore
+            Log.d("FirebaseTest", "✅ Firebase está inicializado correctamente")
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseTest", "❌ Firebase NO está inicializado: ${e.message}")
+            false
+        }
+    }
+
+    // ✅ CORREGIDO: Función para obtener información del proyecto
+    fun obtenerInfoProyecto(): Map<String, String> {
+        return try {
+            // ✅ CORREGIDO: Especificar explícitamente los tipos Pair<String, String>
+            mapOf<String, String>(
+                "firestore_initialized" to firestore.app.name,
+                "storage_initialized" to storage.app.name,
+                "project_id" to (firestore.app.options.projectId ?: "No disponible"),
+                "storage_bucket" to (storage.app.options.storageBucket ?: "No configurado")
+            )
+        } catch (e: Exception) {
+            mapOf("error" to (e.message ?: "Error desconocido"))
+        }
+    }
+
+    // ✅ AGREGADO: Función más simple para debugging
+    fun logEstadoFirebase() {
+        val estado = verificarEstadoFirebase()
+        if (estado) {
+            Log.i("FirebaseStatus", "🔥 Firebase CONECTADO - Proyecto: ${firestore.app.options.projectId}")
+            Log.i("FirebaseStatus", "📦 Storage Bucket: ${storage.app.options.storageBucket}")
+        } else {
+            Log.e("FirebaseStatus", "💥 Firebase DESCONECTADO")
+        }
+    }
+
+    // ✅ NUEVO: Función específica para diagnosticar Storage
+    fun diagnosticarStorage(): Map<String, String> {
+        return try {
+            val bucket = storage.app.options.storageBucket
+            if (bucket.isNullOrEmpty()) {
+                // ✅ CORREGIDO: Especificar tipo explícito
+                mapOf<String, String>(
+                    "status" to "ERROR",
+                    "message" to "Bucket de Storage NO CONFIGURADO",
+                    "solution" to "Ve a Firebase Console > Storage > Comenzar"
+                )
+            } else {
+                // ✅ CORREGIDO: Especificar tipo explícito
+                mapOf<String, String>(
+                    "status" to "OK",
+                    "bucket" to bucket,
+                    "project_id" to (storage.app.options.projectId ?: "No disponible")
+                )
+            }
+        } catch (e: Exception) {
+            // ✅ CORREGIDO: Especificar tipo explícito
+            mapOf<String, String>(
+                "status" to "ERROR",
+                "message" to (e.message ?: "Error desconocido"),
+                "exception" to e.javaClass.simpleName
+            )
+        }
+    }
+
+    // ✅ NUEVO: Función para probar subida a Storage
+    fun probarSubidaStorage(onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.d("StorageTest", "🧪 Iniciando prueba de Storage...")
+
+                val bucket = storage.app.options.storageBucket
+                if (bucket.isNullOrEmpty()) {
+                    onError("Bucket de Storage no configurado")
+                    return@launch
+                }
+
+                Log.d("StorageTest", "📦 Bucket detectado: $bucket")
+
+                // Crear archivo de prueba
+                val testFileName = "test_conexion_${System.currentTimeMillis()}.txt"
+                val testRef = storage.reference.child(testFileName)
+                val testData = "Prueba de conexión Firebase Storage - ${java.util.Date()}"
+
+                // Subir archivo
+                testRef.putBytes(testData.toByteArray()).await()
+                Log.d("StorageTest", "✅ Archivo subido exitosamente")
+
+                // Obtener URL
+                val url = testRef.downloadUrl.await()
+                Log.d("StorageTest", "🔗 URL obtenida: $url")
+
+                onSuccess("✅ Storage funciona\nBucket: $bucket\nURL: $url")
+
+            } catch (e: Exception) {
+                Log.e("StorageTest", "❌ Error en prueba Storage: ${e.message}")
+
+                val errorMessage = when {
+                    e.message?.contains("404") == true -> "❌ ERROR 404: El bucket no existe\n💡 Ve a Firebase Console > Storage > Comenzar"
+                    e.message?.contains("permission") == true -> "❌ ERROR Permisos: Revisa las reglas de Storage\n💡 Configura reglas temporales en Firebase Console"
+                    e.message?.contains("network") == true -> "❌ ERROR Red: Verifica tu conexión a internet"
+                    else -> "❌ Error: ${e.message}"
+                }
+
+                onError(errorMessage)
+            }
+        }
+    }
+}
+```
+```
+# Datos - Modelos  
+```
+package mx.edu.utng.mrs.mycomunidad.datos.fuente_datos
+
+import android.content.Context
+import android.util.Log
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
+import com.google.firebase.storage.FirebaseStorage
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Modelo de datos para representar un comentario en el sistema
+ *
+ * @property id Identificador único del comentario
+ * @property contenido Texto del comentario
+ * @property idUsuario ID del usuario que realizó el comentario
+ * @property idReporte ID del reporte al que pertenece el comentario (opcional)
+ * @property fechaHora Fecha y hora de creación del comentario
+ */
+@Singleton
+class ServicioFirebase @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+    // Firestore normal
+    val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
+
+    // Storage CORREGIDO - Usando el bucket correcto del google-services.json
+    val storage: FirebaseStorage by lazy {
+        FirebaseStorage.getInstance()
+        // Esto usará automáticamente: gs://mi-comunidad-utng.firebasestorage.app
+    }
+
+    // ✅ CORREGIDO: Función para probar la conexión con Firebase
+    fun probarConexionFirebase() {
+        try {
+            // Probar Firestore
+            val db = Firebase.firestore
+            Log.d("FirebaseTest", "✅ Firestore conectado correctamente")
+
+            // Probar Storage
+            val storageRef = storage.reference
+            Log.d("FirebaseTest", "✅ Storage conectado correctamente")
+            Log.d("FirebaseTest", "📦 Bucket: ${storage.app.options.storageBucket}")
+
+            // ✅ CORREGIDO: Usar tipos explícitos en el mapOf
+            val testData = hashMapOf<String, Any>(
+                "timestamp" to System.currentTimeMillis(),
+                "test_type" to "connection_test",
+                "app_name" to "MiComunidad"
+            )
+
+            // Intentar una operación simple de Firestore
+            db.collection("test").document("connection")
+                .set(testData)
+                .addOnSuccessListener {
+                    Log.d("FirebaseTest", "✅ Escritura en Firestore exitosa")
+                }
+                .addOnFailureListener { e ->
+                    Log.w("FirebaseTest", "⚠️ Escritura en Firestore falló: ${e.message}")
+                }
+
+        } catch (e: Exception) {
+            Log.e("FirebaseTest", "❌ Error conectando Firebase: ${e.message}")
+        }
+    }
+
+    // ✅ CORREGIDO: Función para verificar si Firebase está inicializado
+    fun verificarEstadoFirebase(): Boolean {
+        return try {
+            // Intentar acceder a Firestore
+            Firebase.firestore
+            Log.d("FirebaseTest", "✅ Firebase está inicializado correctamente")
+            true
+        } catch (e: Exception) {
+            Log.e("FirebaseTest", "❌ Firebase NO está inicializado: ${e.message}")
+            false
+        }
+    }
+
+    // ✅ CORREGIDO: Función para obtener información del proyecto
+    fun obtenerInfoProyecto(): Map<String, String> {
+        return try {
+            // ✅ CORREGIDO: Especificar explícitamente los tipos Pair<String, String>
+            mapOf<String, String>(
+                "firestore_initialized" to firestore.app.name,
+                "storage_initialized" to storage.app.name,
+                "project_id" to (firestore.app.options.projectId ?: "No disponible"),
+                "storage_bucket" to (storage.app.options.storageBucket ?: "No configurado")
+            )
+        } catch (e: Exception) {
+            mapOf("error" to (e.message ?: "Error desconocido"))
+        }
+    }
+
+    // ✅ AGREGADO: Función más simple para debugging
+    fun logEstadoFirebase() {
+        val estado = verificarEstadoFirebase()
+        if (estado) {
+            Log.i("FirebaseStatus", "🔥 Firebase CONECTADO - Proyecto: ${firestore.app.options.projectId}")
+            Log.i("FirebaseStatus", "📦 Storage Bucket: ${storage.app.options.storageBucket}")
+        } else {
+            Log.e("FirebaseStatus", "💥 Firebase DESCONECTADO")
+        }
+    }
+
+    // ✅ NUEVO: Función específica para diagnosticar Storage
+    fun diagnosticarStorage(): Map<String, String> {
+        return try {
+            val bucket = storage.app.options.storageBucket
+            if (bucket.isNullOrEmpty()) {
+                // ✅ CORREGIDO: Especificar tipo explícito
+                mapOf<String, String>(
+                    "status" to "ERROR",
+                    "message" to "Bucket de Storage NO CONFIGURADO",
+                    "solution" to "Ve a Firebase Console > Storage > Comenzar"
+                )
+            } else {
+                // ✅ CORREGIDO: Especificar tipo explícito
+                mapOf<String, String>(
+                    "status" to "OK",
+                    "bucket" to bucket,
+                    "project_id" to (storage.app.options.projectId ?: "No disponible")
+                )
+            }
+        } catch (e: Exception) {
+            // ✅ CORREGIDO: Especificar tipo explícito
+            mapOf<String, String>(
+                "status" to "ERROR",
+                "message" to (e.message ?: "Error desconocido"),
+                "exception" to e.javaClass.simpleName
+            )
+        }
+    }
+
+    // ✅ NUEVO: Función para probar subida a Storage
+    fun probarSubidaStorage(onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.d("StorageTest", "🧪 Iniciando prueba de Storage...")
+
+                val bucket = storage.app.options.storageBucket
+                if (bucket.isNullOrEmpty()) {
+                    onError("Bucket de Storage no configurado")
+                    return@launch
+                }
+
+                Log.d("StorageTest", "📦 Bucket detectado: $bucket")
+
+                // Crear archivo de prueba
+                val testFileName = "test_conexion_${System.currentTimeMillis()}.txt"
+                val testRef = storage.reference.child(testFileName)
+                val testData = "Prueba de conexión Firebase Storage - ${java.util.Date()}"
+
+                // Subir archivo
+                testRef.putBytes(testData.toByteArray()).await()
+                Log.d("StorageTest", "✅ Archivo subido exitosamente")
+
+                // Obtener URL
+                val url = testRef.downloadUrl.await()
+                Log.d("StorageTest", "🔗 URL obtenida: $url")
+
+                onSuccess("✅ Storage funciona\nBucket: $bucket\nURL: $url")
+
+            } catch (e: Exception) {
+                Log.e("StorageTest", "❌ Error en prueba Storage: ${e.message}")
+
+                val errorMessage = when {
+                    e.message?.contains("404") == true -> "❌ ERROR 404: El bucket no existe\n💡 Ve a Firebase Console > Storage > Comenzar"
+                    e.message?.contains("permission") == true -> "❌ ERROR Permisos: Revisa las reglas de Storage\n💡 Configura reglas temporales en Firebase Console"
+                    e.message?.contains("network") == true -> "❌ ERROR Red: Verifica tu conexión a internet"
+                    else -> "❌ Error: ${e.message}"
+                }
+
+                onError(errorMessage)
+            }
+        }
+    }
+}
+```
+# Notificaciones.kt
+```
+package mx.edu.utng.mrs.mycomunidad.datos.modelo
+
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+/**
+ * Modelo de datos para representar una notificación en el sistema
+ *
+ * @property id Identificador único de la notificación
+ * @property titulo Título de la notificación
+ * @property mensaje Contenido detallado de la notificación
+ * @property idUsuarioDestino ID del usuario destinatario de la notificación
+ * @property idRemitente ID del usuario que envía la notificación (opcional)
+ * @property tipo Tipo de notificación (ej: "reporte", "comentario", "sistema")
+ * @property leida Indica si la notificación ha sido leída
+ * @property fechaHora Fecha y hora de creación de la notificación
+ */
+@Parcelize
+data class Notificacion(
+    val id: String = "",
+    val titulo: String = "",
+    val mensaje: String = "",
+    val tipo: String = "general", // "nuevo_reporte", "actualizacion_reporte", "nuevo_comentario", "reporte_resuelto"
+    val usuarioId: String = "", // Usuario destinatario
+    val datosExtra: Map<String, String> = emptyMap(),
+    val fecha: Long = System.currentTimeMillis(),
+    val leida: Boolean = false
+) : Parcelable {
+
+    fun toMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "titulo" to titulo,
+            "mensaje" to mensaje,
+            "tipo" to tipo,
+            "usuarioId" to usuarioId,
+            "datosExtra" to datosExtra,
+            "fecha" to fecha,
+            "leida" to leida
+        )
+    }
+}
+```
+# Reportes
+```
+package mx.edu.utng.mrs.mycomunidad.datos.modelo
+
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+/**
+ * Modelo de datos para representar un reporte en el sistema
+ *
+ * @property id Identificador único del reporte
+ * @property titulo Título del reporte
+ * @property descripcion Descripción detallada del problema
+ * @property idUsuario ID del usuario que creó el reporte
+ * @property estado Estado actual del reporte (ej: "pendiente", "en_proceso", "resuelto")
+ * @property prioridad Nivel de prioridad (ej: "baja", "media", "alta")
+ * @property fechaCreacion Fecha y hora de creación del reporte
+ * @property fechaActualizacion Fecha y hora de última actualización
+ * @property ubicacion Ubicación asociada al reporte (opcional)
+ */
+@Parcelize
+data class Reporte(
+    val id: String = "",
+    val titulo: String = "",
+    val descripcion: String = "",
+    val tipo: TipoReporte = TipoReporte.OTRO,
+    val gravedad: String = "Media",
+    val latitud: Double = 0.0,
+    val longitud: Double = 0.0,
+    val usuarioId: String = "",
+    val usuarioNombre: String = "",
+    val usuarioEmail: String = "",
+    val fechaCreacion: Long = System.currentTimeMillis(),
+    val fechaActualizacion: Long = System.currentTimeMillis(),
+    val estado: EstadoReporte = EstadoReporte.PENDIENTE,
+    val imagenUrls: List<String> = emptyList(),
+    val comentarios: List<Comentario> = emptyList(),
+    val meGustas: List<String> = emptyList() // Lista de user IDs que dieron like
+) : Parcelable {
+
+    fun toMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "titulo" to titulo,
+            "descripcion" to descripcion,
+            "tipo" to tipo.name,
+            "gravedad" to gravedad,
+            "latitud" to latitud,
+            "longitud" to longitud,
+            "usuarioId" to usuarioId,
+            "usuarioNombre" to usuarioNombre,
+            "usuarioEmail" to usuarioEmail,
+            "fechaCreacion" to fechaCreacion,
+            "fechaActualizacion" to fechaActualizacion,
+            "estado" to estado.name,
+            "imagenUrls" to imagenUrls,
+            "comentarios" to comentarios.map { it.toMap() },
+            "meGustas" to meGustas
+        )
+    }
+}
+
+enum class TipoReporte {
+    BACHE, ALUMBRADO, BASURA, AGUA, OTRO
+}
+
+enum class EstadoReporte {
+    PENDIENTE, APROBADO, RECHAZADO, RESUELTO
+}
+```
+# Ubicacion.kt
+```
+package mx.edu.utng.mrs.mycomunidad.datos.modelo
+
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize // ✅ CORRECTO
+/**
+ * Modelo de datos para representar una ubicación geográfica
+ *
+ * @property latitud Coordenada de latitud
+ * @property longitud Coordenada de longitud
+ * @property direccion Descripción textual de la dirección (opcional)
+ */
+@Parcelize
+data class Ubicacion(
+    val latitud: Double = 0.0,
+    val longitud: Double = 0.0,
+    val direccion: String = ""
+) : Parcelable
+```
+# Usuario.kt
+```
+package mx.edu.utng.mrs.mycomunidad.datos.modelo
+
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+/**
+ * Modelo de datos para representar un usuario en el sistema
+ *
+ * @property id Identificador único del usuario
+ * @property nombre Nombre completo del usuario
+ * @property email Dirección de correo electrónico
+ * @property telefono Número de teléfono (opcional)
+ * @property rol Rol del usuario en el sistema (ej: "usuario", "admin", "tecnico")
+ * @property fechaRegistro Fecha de registro del usuario
+ * @property activo Indica si la cuenta está activa
+ */
+@Parcelize
+data class Usuario(
+    val id: String = "",
+    val email: String = "",
+    val nombre: String = "",
+    val rol: RolUsuario = RolUsuario.USUARIO,
+    val imagenPerfil: String? = null,
+    val fechaCreacion: Long = System.currentTimeMillis(),
+    val estaActivo: Boolean = true,
+    val tokenFCM: String? = null
+) : Parcelable {
+
+    fun toMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "email" to email,
+            "nombre" to nombre,
+            "rol" to rol.name,
+            "imagenPerfil" to (imagenPerfil ?: ""),
+            "fechaCreacion" to fechaCreacion,
+            "estaActivo" to estaActivo,
+            "tokenFCM" to (tokenFCM ?: "")
+        )
+    }
+}
+
+enum class RolUsuario {
+    USUARIO, ADMINISTRADOR
+}
+```
+# RepositoryAutoAuthentication.kt
+```
+package mx.edu.utng.mrs.mycomunidad.datos.repositorio
+
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import javax.inject.Inject
+
+/**
+ * Repositorio encargado de centralizar el acceso a los datos.
+ * Combina datos de fuentes locales, remotas o servicios externos.
+ */
+class RepositorioAutenticacion @Inject constructor() {
+
+
+    /**
+     * Verifica si hay un usuario autenticado automáticamente
+     * @return Usuario de Firebase si está autenticado, null en caso contrario
+     */
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+
+    /**
+     * Obtiene la información del usuario autenticado desde Firestore
+     * @param userId ID del usuario
+     * @return Objeto Usuario si existe, null en caso contrario
+     * @throws Exception si ocurre un error en la consulta
+     */
+    suspend fun registrarUsuario(nombre: String, email: String, contrasena: String): Result<Usuario> {
+        return try {
+            val resultado = auth.createUserWithEmailAndPassword(email, contrasena).await()
+
+            resultado.user?.let { usuarioFirebase ->
+                val usuario = Usuario(
+                    id = usuarioFirebase.uid,
+                    email = email,
+                    nombre = nombre,
+                    rol = RolUsuario.USUARIO,
+                    fechaCreacion = System.currentTimeMillis(),
+                    estaActivo = true
+                )
+
+                db.collection("usuarios")
+                    .document(usuarioFirebase.uid)
+                    .set(usuario.toMap())
+                    .await()
+
+                Result.success(usuario)
+            } ?: Result.failure(Exception("No se pudo crear el usuario en Firebase Auth"))
+
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun iniciarSesion(email: String, contrasena: String): Result<Usuario> {
+        return try {
+            val resultado = auth.signInWithEmailAndPassword(email, contrasena).await()
+            val usuarioFirebase = resultado.user
+            if (usuarioFirebase != null) {
+                val usuario = obtenerUsuarioDesdeFirestore(usuarioFirebase.uid)
+                Result.success(usuario)
+            } else {
+                Result.failure(Exception("Error al iniciar sesión"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun cerrarSesion(): Result<Boolean> {
+        return try {
+            auth.signOut()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun obtenerUsuarioDesdeFirestore(usuarioId: String): Usuario {
+        return try {
+            val documento = db.collection("usuarios")
+                .document(usuarioId)
+                .get()
+                .await()
+
+            if (documento.exists()) {
+                Usuario(
+                    id = documento.getString("id") ?: usuarioId,
+                    email = documento.getString("email") ?: "",
+                    nombre = documento.getString("nombre") ?: "Usuario",
+                    rol = documento.getString("rol")?.let {
+                        try { RolUsuario.valueOf(it) } catch (e: Exception) { RolUsuario.USUARIO }
+                    } ?: RolUsuario.USUARIO,
+                    imagenPerfil = documento.getString("imagenPerfil"),
+                    fechaCreacion = documento.getLong("fechaCreacion") ?: System.currentTimeMillis(),
+                    estaActivo = documento.getBoolean("estaActivo") ?: true
+                )
+            } else {
+                Usuario(
+                    id = usuarioId,
+                    email = auth.currentUser?.email ?: "",
+                    nombre = auth.currentUser?.displayName ?: "Usuario",
+                    fechaCreacion = System.currentTimeMillis()
+                )
+            }
+        } catch (e: Exception) {
+            Usuario(
+                id = usuarioId,
+                email = auth.currentUser?.email ?: "",
+                nombre = auth.currentUser?.displayName ?: "Usuario",
+                fechaCreacion = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun obtenerUsuarioActual(): Usuario? {
+        val usuarioFirebase = auth.currentUser
+        println("🔄 [RepositorioAutenticacion] Verificando usuario actual...")
+        println("   🔥 UID: ${usuarioFirebase?.uid ?: "NULL"}")
+        println("   📧 Email: ${usuarioFirebase?.email ?: "NULL"}")
+        println("   👤 Nombre: ${usuarioFirebase?.displayName ?: "NULL"}")
+
+        return if (usuarioFirebase != null) {
+            Usuario(
+                id = usuarioFirebase.uid,
+                email = usuarioFirebase.email ?: "",
+                nombre = usuarioFirebase.displayName ?: "Usuario"
+            ).also {
+                println("✅ [RepositorioAutenticacion] Usuario básico creado: ${it.id}")
+            }
+        } else {
+            println("❌ [RepositorioAutenticacion] No hay usuario autenticado")
+            null
+        }
+    }
+}
+```
+# RepositoryComentarios.kt
+```
+package mx.edu.utng.mrs.mycomunidad.datos.repositorio
+
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Comentario
+import java.util.*
+import javax.inject.Inject
+
+/**
+ * Repositorio para manejar operaciones CRUD de comentarios
+ */
+class RepositorioComentarios @Inject constructor() {
+    /**
+     * Crea un nuevo comentario en Firestore
+     * @param comentario Objeto Comentario a crear
+     * @return ID del comentario creado
+     * @throws Exception si ocurre un error en la creación
+     */
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+    /**
+     * Obtiene comentarios por ID de reporte
+     * @param idReporte ID del reporte
+     * @return Lista de comentarios asociados al reporte
+     * @throws Exception si ocurre un error en la consulta
+     */
+    suspend fun agregarComentario(
+        reporteId: String,
+        texto: String
+    ): Result<Comentario> {
+        return try {
+            val usuario = auth.currentUser
+            if (usuario == null) {
+                return Result.failure(Exception("Usuario no autenticado"))
+            }
+
+            val comentario = Comentario(
+                id = UUID.randomUUID().toString(),
+                texto = texto.trim(),
+                usuarioId = usuario.uid,
+                usuarioNombre = usuario.displayName ?: "Usuario",
+                fecha = System.currentTimeMillis()
+            )
+
+            db.collection("reportes")
+                .document(reporteId)
+                .update("comentarios", FieldValue.arrayUnion(comentario.toMap()))
+                .await()
+
+            Result.success(comentario)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun obtenerComentariosPorReporte(reporteId: String): Flow<List<Comentario>> = callbackFlow {
+        val listener = db.collection("reportes")
+            .document(reporteId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val comentarios = if (snapshot != null && snapshot.exists()) {
+                    val comentariosFirestore = snapshot.get("comentarios") as? List<Map<String, Any>> ?: emptyList()
+                    comentariosFirestore.map { mapaComentario ->
+                        Comentario(
+                            id = mapaComentario["id"] as? String ?: "",
+                            texto = mapaComentario["texto"] as? String ?: "",
+                            usuarioId = mapaComentario["usuarioId"] as? String ?: "",
+                            usuarioNombre = mapaComentario["usuarioNombre"] as? String ?: "Usuario",
+                            fecha = mapaComentario["fecha"] as? Long ?: System.currentTimeMillis(),
+                            editado = mapaComentario["editado"] as? Boolean ?: false,
+                            fechaEdicion = mapaComentario["fechaEdicion"] as? Long
+                        )
+                    }.sortedByDescending { it.fecha }
+                } else {
+                    emptyList()
+                }
+
+                trySend(comentarios)
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Elimina un comentario por su ID
+     * @param idComentario ID del comentario a eliminar
+     * @throws Exception si ocurre un error en la eliminación
+     */
+    suspend fun eliminarComentario(
+        reporteId: String,
+        comentarioId: String,
+        usuarioId: String,
+        esAdmin: Boolean = false
+    ): Result<Boolean> {
+        return try {
+            val reporte = db.collection("reportes")
+                .document(reporteId)
+                .get()
+                .await()
+
+            if (!reporte.exists()) {
+                return Result.failure(Exception("Reporte no encontrado"))
+            }
+
+            val comentariosFirestore = reporte.get("comentarios") as? List<Map<String, Any>> ?: emptyList()
+            val comentarioAEliminar = comentariosFirestore.find { it["id"] == comentarioId }
+
+            if (comentarioAEliminar == null) {
+                return Result.failure(Exception("Comentario no encontrado"))
+            }
+
+            val comentarioUsuarioId = comentarioAEliminar["usuarioId"] as? String ?: ""
+
+            if (comentarioUsuarioId != usuarioId && !esAdmin) {
+                return Result.failure(Exception("No tienes permisos para eliminar este comentario"))
+            }
+
+            db.collection("reportes")
+                .document(reporteId)
+                .update("comentarios", FieldValue.arrayRemove(comentarioAEliminar))
+                .await()
+
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun editarComentario(
+        reporteId: String,
+        comentarioId: String,
+        nuevoTexto: String,
+        usuarioId: String
+    ): Result<Boolean> {
+        return try {
+            val reporte = db.collection("reportes")
+                .document(reporteId)
+                .get()
+                .await()
+
+            if (!reporte.exists()) {
+                return Result.failure(Exception("Reporte no encontrado"))
+            }
+
+            val comentariosFirestore = reporte.get("comentarios") as? List<Map<String, Any>> ?: emptyList()
+            val comentarioIndex = comentariosFirestore.indexOfFirst { it["id"] == comentarioId }
+
+            if (comentarioIndex == -1) {
+                return Result.failure(Exception("Comentario no encontrado"))
+            }
+
+            val comentario = comentariosFirestore[comentarioIndex]
+            val comentarioUsuarioId = comentario["usuarioId"] as? String ?: ""
+            if (comentarioUsuarioId != usuarioId) {
+                return Result.failure(Exception("No tienes permisos para editar este comentario"))
+            }
+
+            val comentarioEditado = comentario.toMutableMap().apply {
+                put("texto", nuevoTexto.trim())
+                put("editado", true)
+                put("fechaEdicion", System.currentTimeMillis())
+            }
+
+            val nuevosComentarios = comentariosFirestore.toMutableList().apply {
+                set(comentarioIndex, comentarioEditado)
+            }
+
+            db.collection("reportes")
+                .document(reporteId)
+                .update("comentarios", nuevosComentarios)
+                .await()
+
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun obtenerCantidadComentarios(reporteId: String): Int {
+        return try {
+            val reporte = db.collection("reportes")
+                .document(reporteId)
+                .get()
+                .await()
+
+            if (reporte.exists()) {
+                val comentarios = reporte.get("comentarios") as? List<Map<String, Any>> ?: emptyList()
+                comentarios.size
+            } else {
+                0
+            }
+        } catch (e: Exception) {
+            0
+        }
+    }
+}
+```
+# RepositoryNotificaciones.kt
+```
+package mx.edu.utng.mrs.mycomunidad.datos.repositorio
+
+import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Notificacion
+import javax.inject.Inject
+import javax.inject.Singleton
+/**
+ * Repositorio para manejar operaciones CRUD de notificaciones
+ */
+@Singleton
+class RepositorioNotificaciones @Inject constructor() {
+    /**
+     * Crea una nueva notificación en Firestore
+     * @param notificacion Objeto Notificacion a crear
+     * @return ID de la notificación creada
+     * @throws Exception si ocurre un error en la creación
+     */
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+    private val messaging = FirebaseMessaging.getInstance()
+
+    companion object {
+        private const val TAG = "RepositorioNotificaciones"
+    }
+
+    /**
+     * Obtiene notificaciones por ID de usuario destinatario
+     * @param idUsuario ID del usuario destinatario
+     * @return Lista de notificaciones del usuario
+     * @throws Exception si ocurre un error en la consulta
+     */
+    suspend fun guardarTokenUsuario(token: String): Result<Boolean> {
+        return try {
+            val usuarioId = auth.currentUser?.uid ?: return Result.failure(Exception("Usuario no autenticado"))
+
+            db.collection("usuarios")
+                .document(usuarioId)
+                .update("tokenFCM", token)
+                .await()
+
+            Log.d(TAG, "✅ Token FCM guardado para usuario: $usuarioId")
+            Result.success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error guardando token FCM: ${e.message}")
+            Result.failure(e)
+        }
+    }
+    /**
+     * Marca una notificación como leída
+     * @param idNotificacion ID de la notificación
+     * @throws Exception si ocurre un error en la actualización
+     */
+    suspend fun obtenerTokenUsuario(): String? {
+        return try {
+            val usuarioId = auth.currentUser?.uid ?: return null
+            val documento = db.collection("usuarios")
+                .document(usuarioId)
+                .get()
+                .await()
+            val token = documento.getString("tokenFCM")
+            Log.d(TAG, "📱 Token FCM obtenido: ${token?.take(10)}...")
+            token
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error obteniendo token FCM: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun obtenerTokensAdministradores(): List<String> {
+        return try {
+            val snapshot = db.collection("usuarios")
+                .whereEqualTo("rol", "ADMINISTRADOR")
+                .whereEqualTo("estaActivo", true)
+                .get()
+                .await()
+
+            val tokens = snapshot.documents.mapNotNull { documento ->
+                documento.getString("tokenFCM")
+            }.filter { it.isNotBlank() }
+
+            Log.d(TAG, "👥 Tokens de administradores encontrados: ${tokens.size}")
+            tokens
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error obteniendo tokens de administradores: ${e.message}")
+            emptyList()
+        }
+    }
+
+    suspend fun obtenerTokenUsuarioPorId(usuarioId: String): String? {
+        return try {
+            val documento = db.collection("usuarios")
+                .document(usuarioId)
+                .get()
+                .await()
+            val token = documento.getString("tokenFCM")
+            Log.d(TAG, "🔍 Token FCM para usuario $usuarioId: ${token?.take(10)}...")
+            token
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error obteniendo token FCM para usuario $usuarioId: ${e.message}")
+            null
+        }
+    }
+
+    fun suscribirATemas(esAdministrador: Boolean = false) {
+        try {
+            messaging.subscribeToTopic("todos")
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d(TAG, "✅ Suscrito al tema 'todos'")
+                    } else {
+                        Log.e(TAG, "❌ Error suscribiendo al tema 'todos': ${task.exception}")
+                    }
+                }
+
+            if (esAdministrador) {
+                messaging.subscribeToTopic("administradores")
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            Log.d(TAG, "✅ Suscrito al tema 'administradores'")
+                        } else {
+                            Log.e(TAG, "❌ Error suscribiendo al tema 'administradores': ${task.exception}")
+                        }
+                    }
+            }
+
+            messaging.subscribeToTopic("usuarios")
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d(TAG, "✅ Suscrito al tema 'usuarios'")
+                    } else {
+                        Log.e(TAG, "❌ Error suscribiendo al tema 'usuarios': ${task.exception}")
+                    }
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error en suscripción a temas: ${e.message}")
+        }
+    }
+
+    suspend fun guardarNotificacionEnHistorial(notificacion: Notificacion): Result<Boolean> {
+        return try {
+            db.collection("notificaciones")
+                .document(notificacion.id)
+                .set(notificacion.toMap())
+                .await()
+            Log.d(TAG, "📝 Notificación guardada en historial: ${notificacion.id}")
+            Result.success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error guardando notificación en historial: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun obtenerHistorialNotificaciones(usuarioId: String): List<Notificacion> {
+        return try {
+            val snapshot = db.collection("notificaciones")
+                .whereEqualTo("usuarioId", usuarioId)
+                .orderBy("fecha", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(50)
+                .get()
+                .await()
+
+            val notificaciones = snapshot.documents.map { documento ->
+                Notificacion(
+                    id = documento.id,
+                    titulo = documento.getString("titulo") ?: "",
+                    mensaje = documento.getString("mensaje") ?: "",
+                    tipo = documento.getString("tipo") ?: "general",
+                    usuarioId = documento.getString("usuarioId") ?: "",
+                    datosExtra = (documento.get("datosExtra") as? Map<String, String>) ?: emptyMap(),
+                    fecha = documento.getLong("fecha") ?: System.currentTimeMillis(),
+                    leida = documento.getBoolean("leida") ?: false
+                )
+            }
+
+            Log.d(TAG, "📋 Historial de notificaciones obtenido: ${notificaciones.size}")
+            notificaciones
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error obteniendo historial de notificaciones: ${e.message}")
+            emptyList()
+        }
+    }
+
+    suspend fun marcarNotificacionLeida(notificacionId: String): Result<Boolean> {
+        return try {
+            db.collection("notificaciones")
+                .document(notificacionId)
+                .update("leida", true)
+                .await()
+            Log.d(TAG, "✅ Notificación marcada como leída: $notificacionId")
+            Result.success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error marcando notificación como leída: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun obtenerCantidadNoLeidas(usuarioId: String): Int {
+        return try {
+            val snapshot = db.collection("notificaciones")
+                .whereEqualTo("usuarioId", usuarioId)
+                .whereEqualTo("leida", false)
+                .get()
+                .await()
+            val cantidad = snapshot.size()
+            Log.d(TAG, "🔔 Notificaciones no leídas: $cantidad")
+            cantidad
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error obteniendo notificaciones no leídas: ${e.message}")
+            0
+        }
+    }
+}
+```
+# RepositoryReportes.kt
+```
+package mx.edu.utng.mrs.mycomunidad.datos.repositorio
+
+import android.net.Uri
+import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.tasks.await
+import mx.edu.utng.mrs.mycomunidad.datos.fuente_datos.ServicioFirebase
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Comentario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import java.util.*
+import javax.inject.Inject
+/**
+ * Repositorio para manejar operaciones CRUD de reportes
+ */
+class RepositorioReportes @Inject constructor(
+    /**
+     * Crea un nuevo reporte en Firestore
+     * @param reporte Objeto Reporte a crear
+     * @return ID del reporte creado
+     * @throws Exception si ocurre un error en la creación
+     */
+    private val servicioFirebase: ServicioFirebase
+) {
+
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+    private val storage: FirebaseStorage get() = servicioFirebase.storage
+
+    companion object {
+        private const val TAG = "RepositorioReportes"
+    }
+    /**
+     * Obtiene reportes por ID de usuario
+     * @param idUsuario ID del usuario
+     * @return Lista de reportes del usuario
+     * @throws Exception si ocurre un error en la consulta
+     */
+
+    suspend fun crearReporte(
+        titulo: String,
+        descripcion: String,
+        tipo: TipoReporte,
+        gravedad: String,
+        latitud: Double,
+        longitud: Double,
+        imagenes: List<Uri> = emptyList()
+    ): Result<Reporte> {
+        return try {
+            Log.d(TAG, "🔄 Iniciando creación de reporte...")
+
+            val usuario = auth.currentUser
+            if (usuario == null) {
+                Log.e(TAG, "❌ Usuario no autenticado")
+                return Result.failure(Exception("Usuario no autenticado"))
+            }
+
+            // ✅ CORREGIDO: Obtener información COMPLETA del usuario
+            Log.d(TAG, "👤 Información del usuario Firebase:")
+            Log.d(TAG, "   ID: ${usuario.uid}")
+            Log.d(TAG, "   DisplayName: ${usuario.displayName ?: "NULO"}")
+            Log.d(TAG, "   Email: ${usuario.email ?: "NULO"}")
+
+            // ✅ CORREGIDO: Obtener información REAL del usuario desde Firestore
+            var nombreUsuario = usuario.displayName
+            var emailUsuario = usuario.email
+
+            try {
+                // Buscar información adicional en la colección "usuarios"
+                val usuarioDoc = db.collection("usuarios")
+                    .whereEqualTo("userId", usuario.uid)
+                    .limit(1)
+                    .get()
+                    .await()
+
+                if (!usuarioDoc.isEmpty && usuarioDoc.documents.isNotEmpty()) {
+                    val doc = usuarioDoc.documents[0]
+                    val nombreFirestore = doc.getString("nombre") ?: doc.getString("nombreCompleto")
+                    val emailFirestore = doc.getString("email")
+
+                    if (!nombreFirestore.isNullOrBlank()) {
+                        nombreUsuario = nombreFirestore
+                        Log.d(TAG, "✅ Nombre obtenido de Firestore: $nombreUsuario")
+                    }
+
+                    if (!emailFirestore.isNullOrBlank()) {
+                        emailUsuario = emailFirestore
+                        Log.d(TAG, "✅ Email obtenido de Firestore: $emailUsuario")
+                    }
+                } else {
+                    Log.w(TAG, "⚠️ No se encontró documento de usuario en Firestore para ID: ${usuario.uid}")
+                    Log.w(TAG, "🔍 Intentando con documento directo...")
+
+                    // Intentar con documento directo
+                    try {
+                        val directDoc = db.collection("usuarios")
+                            .document(usuario.uid)
+                            .get()
+                            .await()
+
+                        if (directDoc.exists()) {
+                            val nombreDirecto = directDoc.getString("nombre") ?: directDoc.getString("nombreCompleto")
+                            val emailDirecto = directDoc.getString("email")
+
+                            if (!nombreDirecto.isNullOrBlank()) {
+                                nombreUsuario = nombreDirecto
+                                Log.d(TAG, "✅ Nombre obtenido de documento directo: $nombreUsuario")
+                            }
+
+                            if (!emailDirecto.isNullOrBlank()) {
+                                emailUsuario = emailDirecto
+                                Log.d(TAG, "✅ Email obtenido de documento directo: $emailUsuario")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "⚠️ Error obteniendo usuario por documento directo: ${e.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️ Error obteniendo usuario de Firestore: ${e.message}")
+            }
+
+            // ✅ Usar valores REALES o por defecto si no se encontró información
+            val nombreFinal = if (nombreUsuario.isNullOrBlank()) {
+                "Usuario ${usuario.uid.take(8)}..."
+            } else {
+                nombreUsuario
+            }
+
+            val emailFinal = if (emailUsuario.isNullOrBlank()) {
+                "usuario@example.com"
+            } else {
+                emailUsuario
+            }
+
+            Log.d(TAG, "👤 Información FINAL para reporte:")
+            Log.d(TAG, "   Nombre: $nombreFinal")
+            Log.d(TAG, "   Email: $emailFinal")
+
+            // Subir imágenes
+            val urlsImagenes = mutableListOf<String>()
+            if (imagenes.isNotEmpty()) {
+                Log.d(TAG, "📤 Subiendo ${imagenes.size} imagen(es)...")
+                for ((index, uri) in imagenes.withIndex()) {
+                    try {
+                        val url = subirImagen(uri)
+                        if (url.startsWith("http")) {
+                            urlsImagenes.add(url)
+                            Log.d(TAG, "✅ Imagen $index subida: $url")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "❌ Error subiendo imagen $index: ${e.message}")
+                    }
+                }
+            }
+
+            // ✅ CORREGIDO: Crear el reporte con información REAL del usuario
+            val reporte = Reporte(
+                id = UUID.randomUUID().toString(),
+                titulo = titulo,
+                descripcion = descripcion,
+                tipo = tipo,
+                gravedad = gravedad,
+                latitud = latitud,
+                longitud = longitud,
+                usuarioId = usuario.uid,
+                usuarioNombre = nombreFinal,  // ✅ Nombre real
+                usuarioEmail = emailFinal,    // ✅ Email real
+                fechaCreacion = System.currentTimeMillis(),
+                fechaActualizacion = System.currentTimeMillis(),
+                estado = EstadoReporte.PENDIENTE,
+                imagenUrls = urlsImagenes,
+                comentarios = emptyList(),
+                meGustas = emptyList()
+            )
+
+            Log.d(TAG, "💾 Guardando reporte en Firestore:")
+            Log.d(TAG, "   ID: ${reporte.id}")
+            Log.d(TAG, "   Título: ${reporte.titulo}")
+            Log.d(TAG, "   Usuario Nombre: ${reporte.usuarioNombre}")
+            Log.d(TAG, "   Usuario Email: ${reporte.usuarioEmail}")
+            Log.d(TAG, "   Usuario ID: ${reporte.usuarioId}")
+
+            // ✅ CORREGIDO: Verificar datos antes de guardar
+            val datosParaGuardar = reporte.toMap()
+            Log.d(TAG, "📝 DATOS A GUARDAR (VERIFICACIÓN):")
+            Log.d(TAG, "   usuarioNombre: ${datosParaGuardar["usuarioNombre"]}")
+            Log.d(TAG, "   usuarioEmail: ${datosParaGuardar["usuarioEmail"]}")
+            Log.d(TAG, "   usuarioId: ${datosParaGuardar["usuarioId"]}")
+
+            // Guardar en Firestore
+            db.collection("reportes")
+                .document(reporte.id)
+                .set(datosParaGuardar)
+                .await()
+
+            Log.d(TAG, "✅ Reporte creado exitosamente: ${reporte.id}")
+            Result.success(reporte)
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error creando reporte: ${e.message}")
+            Log.e(TAG, "📝 Stack trace completo:", e)
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun subirImagen(uri: Uri): String {
+        return try {
+            val extension = when {
+                uri.toString().contains(".png") -> "png"
+                uri.toString().contains(".jpeg") -> "jpeg"
+                else -> "jpg"
+            }
+            val nombreArchivo = "reportes/${UUID.randomUUID()}.$extension"
+
+            val referencia = storage.reference.child(nombreArchivo)
+            val uploadTask = referencia.putFile(uri)
+            uploadTask.await()
+
+            val url = referencia.downloadUrl.await()
+            url.toString()
+        } catch (e: Exception) {
+            throw Exception("Error al subir imagen: ${e.message}")
+        }
+    }
+
+    /**
+     * Actualiza el estado de un reporte
+     * @param idReporte ID del reporte
+     * @param nuevoEstado Nuevo estado del reporte
+     * @throws Exception si ocurre un error en la actualización
+     */
+    suspend fun obtenerReportePorId(reporteId: String): Reporte? {
+        return try {
+            Log.d(TAG, "🔍 Obteniendo reporte por ID: $reporteId")
+
+            val documento = db.collection("reportes")
+                .document(reporteId)
+                .get()
+                .await()
+
+            if (documento.exists()) {
+                // ✅ Convertir a Reporte
+                val reporte = documento.toReporte()
+
+                // ✅ DIAGNÓSTICO: Verificar información del usuario
+                Log.d(TAG, "✅ Reporte obtenido por ID:")
+                Log.d(TAG, "   Título: ${reporte.titulo}")
+                Log.d(TAG, "   Usuario Nombre: ${reporte.usuarioNombre}")
+                Log.d(TAG, "   Usuario Email: ${reporte.usuarioEmail}")
+                Log.d(TAG, "   Usuario ID: ${reporte.usuarioId}")
+                Log.d(TAG, "   ¿Nombre vacío?: ${reporte.usuarioNombre.isBlank()}")
+
+                // ✅ Si el nombre está vacío, intentar obtenerlo desde otra fuente
+                if (reporte.usuarioNombre.isBlank() || reporte.usuarioNombre == "Usuario") {
+                    Log.w(TAG, "⚠️ Nombre de usuario está vacío o es 'Usuario'")
+                    Log.w(TAG, "🔄 Intentando obtener información adicional...")
+
+                    // Intentar obtener nombre desde la colección "usuarios"
+                    try {
+                        val usuarioDoc = db.collection("usuarios")
+                            .document(reporte.usuarioId)
+                            .get()
+                            .await()
+
+                        if (usuarioDoc.exists()) {
+                            val nombreCompleto = usuarioDoc.getString("nombre") ?:
+                            usuarioDoc.getString("nombreCompleto") ?:
+                            usuarioDoc.getString("displayName")
+
+                            if (!nombreCompleto.isNullOrBlank()) {
+                                // Actualizar el nombre en el reporte
+                                Log.d(TAG, "✅ Nombre obtenido de colección usuarios: $nombreCompleto")
+                                // Crear nuevo reporte con nombre actualizado
+                                return reporte.copy(usuarioNombre = nombreCompleto)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "⚠️ No se pudo obtener nombre adicional: ${e.message}")
+                    }
+                }
+
+                reporte
+            } else {
+                Log.w(TAG, "❌ Reporte no encontrado: $reporteId")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error obteniendo reporte por ID: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun obtenerReportesPorUsuario(usuarioId: String): List<Reporte> {
+        return try {
+            Log.d(TAG, "🔍 Obteniendo reportes para usuario: $usuarioId")
+
+            val snapshot = db.collection("reportes")
+                .whereEqualTo("usuarioId", usuarioId)
+                .orderBy("fechaCreacion", Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            val reportes = snapshot.documents.mapNotNull { documento ->
+                try {
+                    val reporte = documento.toReporte()
+
+                    // ✅ DIAGNÓSTICO para cada reporte
+                    Log.d(TAG, "   📋 Reporte: ${reporte.titulo}")
+                    Log.d(TAG, "      👤 Usuario: ${reporte.usuarioNombre}")
+                    Log.d(TAG, "      📧 Email: ${reporte.usuarioEmail}")
+
+                    reporte
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error convirtiendo documento: ${e.message}")
+                    null
+                }
+            }
+
+            Log.d(TAG, "✅ Total reportes encontrados: ${reportes.size}")
+            reportes
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error obteniendo reportes por usuario: ${e.message}")
+            emptyList()
+        }
+    }
+
+    suspend fun obtenerTodosLosReportes(): List<Reporte> {
+        return try {
+            Log.d(TAG, "🔍 Obteniendo TODOS los reportes...")
+
+            val snapshot = db.collection("reportes")
+                .orderBy("fechaCreacion", Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            val reportes = snapshot.documents.map { documento ->
+                documento.toReporte()
+            }
+
+            // ✅ DIAGNÓSTICO: Mostrar información de usuarios
+            Log.d(TAG, "📊 RESUMEN DE REPORTES (${reportes.size}):")
+            reportes.take(5).forEachIndexed { index, reporte ->
+                Log.d(TAG, "   #${index + 1}: '${reporte.titulo}'")
+                Log.d(TAG, "      👤 Por: ${reporte.usuarioNombre}")
+                Log.d(TAG, "      📧 Email: ${reporte.usuarioEmail}")
+            }
+
+            reportes
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error obteniendo todos los reportes: ${e.message}")
+            emptyList()
+        }
+    }
+
+    suspend fun obtenerReportesPublicos(): List<Reporte> {
+        return try {
+            val snapshot = db.collection("reportes")
+                .whereIn("estado", listOf(EstadoReporte.APROBADO.name, EstadoReporte.RESUELTO.name))
+                .orderBy("fechaCreacion", Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            snapshot.documents.map { documento ->
+                documento.toReporte()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun obtenerReportesPorEstado(estado: EstadoReporte): List<Reporte> {
+        return try {
+            val snapshot = db.collection("reportes")
+                .whereEqualTo("estado", estado.name)
+                .orderBy("fechaCreacion", Query.Direction.DESCENDING)
+                .get()
+                .await()
+            snapshot.documents.map { documento ->
+                documento.toReporte()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun editarReporte(
+        reporteId: String,
+        titulo: String,
+        descripcion: String,
+        tipo: TipoReporte,
+        gravedad: String,
+        latitud: Double,
+        longitud: Double
+    ): Result<Boolean> {
+        return try {
+            val usuarioId = auth.currentUser?.uid ?: return Result.failure(Exception("Usuario no autenticado"))
+            val reporte = obtenerReportePorId(reporteId)
+
+            if (reporte != null && reporte.usuarioId == usuarioId) {
+                val updates = hashMapOf<String, Any>(
+                    "titulo" to titulo,
+                    "descripcion" to descripcion,
+                    "tipo" to tipo.name,
+                    "gravedad" to gravedad,
+                    "latitud" to latitud,
+                    "longitud" to longitud,
+                    "fechaActualizacion" to System.currentTimeMillis()
+                )
+
+                db.collection("reportes")
+                    .document(reporteId)
+                    .update(updates)
+                    .await()
+
+                Result.success(true)
+            } else {
+                Result.failure(Exception("No tienes permisos para editar este reporte"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun actualizarEstadoReporte(reporteId: String, estado: EstadoReporte): Result<Boolean> {
+        return try {
+            db.collection("reportes")
+                .document(reporteId)
+                .update("estado", estado.name)
+                .await()
+
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun alternarMeGusta(reporteId: String): Result<Boolean> {
+        return try {
+            val usuarioId = auth.currentUser?.uid ?: return Result.failure(Exception("Usuario no autenticado"))
+            val reporte = obtenerReportePorId(reporteId)
+
+            reporte?.let {
+                val meGustas = it.meGustas.toMutableList()
+                if (meGustas.contains(usuarioId)) {
+                    meGustas.remove(usuarioId)
+                } else {
+                    meGustas.add(usuarioId)
+                }
+
+                db.collection("reportes")
+                    .document(reporteId)
+                    .update("meGustas", meGustas)
+                    .await()
+
+                Result.success(true)
+            } ?: Result.failure(Exception("Reporte no encontrado"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun eliminarReporte(reporteId: String): Result<Boolean> {
+        return try {
+            val usuarioId = auth.currentUser?.uid ?: return Result.failure(Exception("Usuario no autenticado"))
+            val reporte = obtenerReportePorId(reporteId)
+
+            if (reporte != null && reporte.usuarioId == usuarioId) {
+                // Eliminar imágenes del Storage
+                reporte.imagenUrls.forEach { url ->
+                    try {
+                        storage.getReferenceFromUrl(url).delete().await()
+                    } catch (e: Exception) {
+                        // Ignorar errores al eliminar imágenes
+                    }
+                }
+
+                // Eliminar documento de Firestore
+                db.collection("reportes")
+                    .document(reporteId)
+                    .delete()
+                    .await()
+
+                Result.success(true)
+            } else {
+                Result.failure(Exception("No tienes permisos para eliminar este reporte"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun agregarComentario(
+        reporteId: String,
+        comentario: String,
+        usuarioId: String,
+        usuarioNombre: String
+    ): Result<Boolean> {
+        return try {
+            val comentarioData = mapOf(
+                "id" to UUID.randomUUID().toString(),
+                "texto" to comentario,
+                "usuarioId" to usuarioId,
+                "usuarioNombre" to usuarioNombre,
+                "fecha" to System.currentTimeMillis(),
+                "editado" to false
+            )
+
+            db.collection("reportes")
+                .document(reporteId)
+                .update("comentarios", FieldValue.arrayUnion(comentarioData))
+                .await()
+
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun actualizarReporte(
+        reporteId: String,
+        titulo: String,
+        descripcion: String,
+        tipo: TipoReporte
+    ): Result<Boolean> {
+        return try {
+            val updates = hashMapOf<String, Any>(
+                "titulo" to titulo,
+                "descripcion" to descripcion,
+                "tipo" to tipo.name
+            )
+
+            db.collection("reportes")
+                .document(reporteId)
+                .update(updates)
+                .await()
+
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun probarStorage(): Result<String> {
+        return try {
+            val testRef = storage.reference.child("test/${System.currentTimeMillis()}.txt")
+            val testData = "Prueba de conexión Firebase Storage ${System.currentTimeMillis()}"
+
+            testRef.putBytes(testData.toByteArray()).await()
+            val url = testRef.downloadUrl.await()
+
+            Result.success("Storage funciona correctamente. URL: $url")
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ✅ FUNCIÓN MEJORADA para convertir DocumentSnapshot a Reporte
+    private fun com.google.firebase.firestore.DocumentSnapshot.toReporte(): Reporte {
+        return try {
+            // ✅ 1. Obtener datos básicos
+            val id = getString("id") ?: this.id
+            val titulo = getString("titulo") ?: "Sin título"
+            val descripcion = getString("descripcion") ?: "Sin descripción"
+
+            // ✅ 2. Tipo
+            val tipo = try {
+                TipoReporte.valueOf(getString("tipo") ?: "OTRO")
+            } catch (e: Exception) {
+                TipoReporte.OTRO
+            }
+
+            // ✅ 3. Datos de ubicación
+            val gravedad = getString("gravedad") ?: "Media"
+            val latitud = getDouble("latitud") ?: 0.0
+            val longitud = getDouble("longitud") ?: 0.0
+
+            // ✅ 4. DATOS DEL USUARIO (CORREGIDO)
+            val usuarioId = getString("usuarioId") ?: ""
+
+            // ✅ Intentar obtener nombre de usuario de diferentes campos
+            val usuarioNombre = when {
+                !getString("usuarioNombre").isNullOrBlank() -> getString("usuarioNombre")!!
+                !getString("nombreUsuario").isNullOrBlank() -> getString("nombreUsuario")!!
+                !getString("userName").isNullOrBlank() -> getString("userName")!!
+                !getString("displayName").isNullOrBlank() -> getString("displayName")!!
+                !getString("authorName").isNullOrBlank() -> getString("authorName")!!
+                else -> "Usuario ${usuarioId.take(8)}..."
+            }
+
+            // ✅ Intentar obtener email de usuario de diferentes campos
+            val usuarioEmail = when {
+                !getString("usuarioEmail").isNullOrBlank() -> getString("usuarioEmail")!!
+                !getString("email").isNullOrBlank() -> getString("email")!!
+                !getString("userEmail").isNullOrBlank() -> getString("userEmail")!!
+                else -> "usuario@example.com"
+            }
+
+            // ✅ 5. Fechas
+            val fechaCreacion = getLong("fechaCreacion") ?: System.currentTimeMillis()
+            val fechaActualizacion = getLong("fechaActualizacion") ?: System.currentTimeMillis()
+
+            // ✅ 6. Estado
+            val estado = try {
+                EstadoReporte.valueOf(getString("estado") ?: "PENDIENTE")
+            } catch (e: Exception) {
+                EstadoReporte.PENDIENTE
+            }
+
+            // ✅ 7. Imágenes
+            val imagenUrls = mutableListOf<String>()
+            val imagenesData = get("imagenUrls")
+
+            when (imagenesData) {
+                is List<*> -> {
+                    imagenesData.forEach { item ->
+                        when (item) {
+                            is String -> imagenUrls.add(item)
+                            is Map<*, *> -> {
+                                val url = item["url"] as? String
+                                url?.let { imagenUrls.add(it) }
+                            }
+                        }
+                    }
+                }
+                is ArrayList<*> -> {
+                    imagenesData.forEach { item ->
+                        if (item is String) {
+                            imagenUrls.add(item)
+                        }
+                    }
+                }
+            }
+
+            // ✅ 8. Comentarios
+            val comentariosFirestore = get("comentarios") as? List<Map<String, Any>> ?: emptyList()
+            val comentarios = comentariosFirestore.mapNotNull { mapaComentario ->
+                try {
+                    Comentario(
+                        id = mapaComentario["id"] as? String ?: "",
+                        texto = mapaComentario["texto"] as? String ?: "",
+                        usuarioId = mapaComentario["usuarioId"] as? String ?: "",
+                        usuarioNombre = mapaComentario["usuarioNombre"] as? String ?: "Usuario",
+                        fecha = mapaComentario["fecha"] as? Long ?: System.currentTimeMillis(),
+                        editado = mapaComentario["editado"] as? Boolean ?: false
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            // ✅ 9. Me gustas
+            val meGustas = (get("meGustas") as? List<String>) ?: emptyList()
+
+            // ✅ 10. Crear Reporte
+            Reporte(
+                id = id,
+                titulo = titulo,
+                descripcion = descripcion,
+                tipo = tipo,
+                gravedad = gravedad,
+                latitud = latitud,
+                longitud = longitud,
+                usuarioId = usuarioId,
+                usuarioNombre = usuarioNombre,
+                usuarioEmail = usuarioEmail,
+                fechaCreacion = fechaCreacion,
+                fechaActualizacion = fechaActualizacion,
+                estado = estado,
+                imagenUrls = imagenUrls,
+                comentarios = comentarios,
+                meGustas = meGustas
+            )
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR en toReporte: ${e.message}")
+
+            // Retornar un reporte mínimo en caso de error
+            Reporte(
+                id = this.id,
+                titulo = "Error al cargar",
+                descripcion = "No se pudo cargar la información del reporte",
+                tipo = TipoReporte.OTRO,
+                gravedad = "Media",
+                latitud = 0.0,
+                longitud = 0.0,
+                usuarioId = "",
+                usuarioNombre = "Usuario",
+                usuarioEmail = "",
+                fechaCreacion = System.currentTimeMillis(),
+                fechaActualizacion = System.currentTimeMillis(),
+                estado = EstadoReporte.PENDIENTE,
+                imagenUrls = emptyList(),
+                comentarios = emptyList(),
+                meGustas = emptyList()
+            )
+        }
+    }
+}
+```
+# RepositoryUsuario.kt
+```
+package mx.edu.utng.mrs.mycomunidad.datos.repositorio
+
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import javax.inject.Inject
+import android.util.Log
+
+/**
+ * Repositorio para manejar operaciones CRUD de usuarios
+ */
+class RepositorioUsuarios @Inject constructor(
+    /**
+     * Crea un nuevo usuario en Firestore
+     * @param usuario Objeto Usuario a crear
+     * @return ID del usuario creado
+     * @throws Exception si ocurre un error en la creación
+     */
+    private val firestore: FirebaseFirestore
+) {
+
+    init {
+        Log.d("FIREBASE_DEBUG", "✅ RepositorioUsuarios inicializado")
+    }
+
+    fun obtenerTodosLosUsuarios(): Flow<List<Usuario>> = callbackFlow {
+        Log.d("FIREBASE_DEBUG", "🔥 INICIANDO CONSULTA: collection('usuarios')")
+
+        val listener = firestore.collection("usuarios")
+            .addSnapshotListener { snapshot, error ->
+                Log.d("FIREBASE_DEBUG", "📡 SNAPSHOT LISTENER ACTIVADO")
+
+                if (error != null) {
+                    Log.e("FIREBASE_DEBUG", "❌ ERROR Firestore: ${error.message}")
+                    Log.e("FIREBASE_DEBUG", "❌ ERROR Code: ${error.code}")
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+
+                Log.d("FIREBASE_DEBUG", "📄 Snapshot recibido, documentos: ${snapshot?.documents?.size}")
+
+                val usuarios = snapshot?.documents?.mapNotNull { documento ->
+                    Log.d("FIREBASE_DEBUG", "📋 Procesando documento: ${documento.id}")
+                    val usuario = documento.toUsuario()
+                    if (usuario == null) {
+                        Log.e("FIREBASE_DEBUG", "❌ Documento ${documento.id} no pudo convertirse a Usuario")
+                    } else {
+                        Log.d("FIREBASE_DEBUG", "👤 Usuario convertido: ${usuario.nombre} (${usuario.email})")
+                    }
+                    usuario
+                } ?: emptyList()
+
+                Log.d("FIREBASE_DEBUG", "👥 TOTAL usuarios finales: ${usuarios.size}")
+                trySend(usuarios)
+            }
+
+        Log.d("FIREBASE_DEBUG", "🎯 Listener de Firestore registrado")
+
+        awaitClose {
+            Log.d("FIREBASE_DEBUG", "🔚 Listener removido")
+            listener.remove()
+        }
+    }
+
+    /**
+     * Obtiene un usuario por su ID
+     * @param userId ID del usuario
+     * @return Objeto Usuario si existe, null en caso contrario
+     * @throws Exception si ocurre un error en la consulta
+     */
+    suspend fun obtenerUsuariosDebug(): List<Usuario> {
+        return try {
+            Log.d("FIREBASE_DEBUG", "🔍 EJECUTANDO CONSULTA DIRECTA A FIRESTORE")
+            val snapshot = firestore.collection("usuarios").get().await()
+            Log.d("FIREBASE_DEBUG", "📊 Documentos obtenidos: ${snapshot.documents.size}")
+
+            val usuarios = snapshot.documents.mapNotNull { documento ->
+                val usuario = documento.toUsuario()
+                if (usuario == null) {
+                    Log.e("FIREBASE_DEBUG", "❌ Falló conversión del documento: ${documento.id}")
+                    Log.e("FIREBASE_DEBUG", "📝 Datos del documento: ${documento.data}")
+                }
+                usuario
+            }
+
+            Log.d("FIREBASE_DEBUG", "✅ Usuarios convertidos: ${usuarios.size}")
+            usuarios
+        } catch (e: Exception) {
+            Log.e("FIREBASE_DEBUG", "❌ Error en obtenerUsuariosDebug: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
+     * Actualiza la información de un usuario
+     * @param userId ID del usuario a actualizar
+     * @param usuario Objeto Usuario con los datos actualizados
+     * @throws Exception si ocurre un error en la actualización
+     */
+    suspend fun obtenerUsuarioPorId(usuarioId: String): Usuario? {
+        return try {
+            val documento = firestore.collection("usuarios")
+                .document(usuarioId)
+                .get()
+                .await()
+            documento.toUsuario()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+
+    /**
+     * Desactiva la cuenta de un usuario
+     * @param userId ID del usuario a desactivar
+     * @throws Exception si ocurre un error en la actualización
+     */ 
+    suspend fun actualizarRolUsuario(usuarioId: String, nuevoRol: RolUsuario): Result<Boolean> {
+        return try {
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .update("rol", nuevoRol.name)
+                .await()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun desactivarUsuario(usuarioId: String): Result<Boolean> {
+        return try {
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .update("estaActivo", false)
+                .await()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun eliminarUsuario(usuarioId: String): Result<Boolean> {
+        return try {
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .delete()
+                .await()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun buscarUsuariosPorNombre(nombre: String): Flow<List<Usuario>> = callbackFlow {
+        val listener = firestore.collection("usuarios")
+            .whereGreaterThanOrEqualTo("nombre", nombre)
+            .whereLessThanOrEqualTo("nombre", nombre + "\uf8ff")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val usuarios = snapshot?.documents?.mapNotNull { documento ->
+                    documento.toUsuario()
+                } ?: emptyList()
+                trySend(usuarios)
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun actualizarPerfilUsuario(usuarioId: String, nombre: String, imagenUrl: String?): Result<Boolean> {
+        return try {
+            val updates = mutableMapOf<String, Any>()
+            updates["nombre"] = nombre
+            if (imagenUrl != null) {
+                updates["imagenPerfil"] = imagenUrl
+            }
+
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .update(updates)
+                .await()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun obtenerUsuariosPorRol(rol: RolUsuario): Flow<List<Usuario>> = callbackFlow {
+        val listener = firestore.collection("usuarios")
+            .whereEqualTo("rol", rol.name)
+            .whereEqualTo("estaActivo", true)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val usuarios = snapshot?.documents?.mapNotNull { documento ->
+                    documento.toUsuario()
+                } ?: emptyList()
+                trySend(usuarios)
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun obtenerEstadisticasUsuarios(): Map<String, Int> {
+        return try {
+            val todosUsuarios = firestore.collection("usuarios").get().await()
+
+            val total = todosUsuarios.size()
+            val activos = todosUsuarios.count { it.getBoolean("estaActivo") ?: true }
+            val administradores = todosUsuarios.count {
+                it.getString("rol") == RolUsuario.ADMINISTRADOR.name
+            }
+
+            mapOf(
+                "total" to total,
+                "activos" to activos,
+                "administradores" to administradores
+            )
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun activarUsuario(usuarioId: String): Result<Boolean> {
+        return try {
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .update("estaActivo", true)
+                .await()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun verificarEmailExistente(email: String): Boolean {
+        return try {
+            val snapshot = firestore.collection("usuarios")
+                .whereEqualTo("email", email)
+                .get()
+                .await()
+            !snapshot.isEmpty
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun actualizarUsuario(usuarioId: String, nombre: String, email: String): Result<Unit> {
+        return try {
+            val usuariosConEmail = firestore.collection("usuarios")
+                .whereEqualTo("email", email)
+                .get()
+                .await()
+
+            val emailExisteEnOtroUsuario = usuariosConEmail.documents.any { doc ->
+                doc.id != usuarioId && doc.getString("email") == email
+            }
+
+            if (emailExisteEnOtroUsuario) {
+                return Result.failure(Exception("El email ya está en uso por otro usuario"))
+            }
+
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .update(
+                    mapOf(
+                        "nombre" to nombre,
+                        "email" to email
+                    )
+                )
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun actualizarNombreUsuario(usuarioId: String, nuevoNombre: String): Result<Unit> {
+        return try {
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .update("nombre", nuevoNombre)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun actualizarEmailUsuario(usuarioId: String, nuevoEmail: String): Result<Unit> {
+        return try {
+            if (verificarEmailExistente(nuevoEmail)) {
+                return Result.failure(Exception("El email ya está en uso"))
+            }
+
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .update("email", nuevoEmail)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun actualizarImagenPerfil(usuarioId: String, imagenUrl: String): Result<Unit> {
+        return try {
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .update("imagenPerfil", imagenUrl)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun obtenerEstadisticasUsuario(usuarioId: String): Map<String, Int> {
+        return try {
+            val reportesUsuario = firestore.collection("reportes")
+                .whereEqualTo("usuarioId", usuarioId)
+                .get()
+                .await()
+
+            val todosReportes = firestore.collection("reportes").get().await()
+            var totalComentarios = 0
+
+            todosReportes.documents.forEach { reporteDoc ->
+                val comentarios = reporteDoc.get("comentarios") as? List<Map<String, Any>> ?: emptyList()
+                totalComentarios += comentarios.count { comentario ->
+                    comentario["usuarioId"] == usuarioId
+                }
+            }
+
+            mapOf(
+                "totalReportes" to reportesUsuario.size(),
+                "totalComentarios" to totalComentarios,
+                "reportesResueltos" to reportesUsuario.count {
+                    it.getString("estado") == "RESUELTO"
+                }
+            )
+        } catch (e: Exception) {
+            mapOf(
+                "totalReportes" to 0,
+                "totalComentarios" to 0,
+                "reportesResueltos" to 0
+            )
+        }
+    }
+
+    suspend fun cambiarContrasena(usuarioId: String, nuevaContrasena: String): Result<Unit> {
+        return try {
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun crearUsuario(usuario: Usuario): Result<Unit> {
+        return try {
+            if (verificarEmailExistente(usuario.email)) {
+                return Result.failure(Exception("El email ya está registrado"))
+            }
+
+            firestore.collection("usuarios")
+                .document(usuario.id)
+                .set(
+                    mapOf(
+                        "id" to usuario.id,
+                        "email" to usuario.email,
+                        "nombre" to usuario.nombre,
+                        "rol" to usuario.rol.name,
+                        "imagenPerfil" to (usuario.imagenPerfil ?: ""),
+                        "fechaCreacion" to usuario.fechaCreacion,
+                        "estaActivo" to usuario.estaActivo
+                    )
+                )
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ============== FUNCIÓN PARA OBTENER EMAIL (ELIMINACIÓN POR EMAIL) ==============
+
+    suspend fun obtenerEmailParaEliminacion(usuarioId: String): Result<String> {
+        return try {
+            val documento = firestore.collection("usuarios")
+                .document(usuarioId)
+                .get()
+                .await()
+
+            if (!documento.exists()) {
+                return Result.failure(Exception("Usuario no encontrado"))
+            }
+
+            val email = documento.getString("email")
+            if (email.isNullOrEmpty()) {
+                return Result.failure(Exception("No se encontró email del usuario"))
+            }
+
+            Result.success(email)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ============== FUNCIÓN ELIMINACIÓN DIRECTA (OPCIONAL) ==============
+
+    suspend fun eliminarCuentaUsuario(usuarioId: String): Result<Unit> {
+        return try {
+            Log.d("ELIMINAR_CUENTA", "Iniciando eliminación para usuario: $usuarioId")
+
+            // 1. Obtener el usuario primero
+            val usuarioDoc = firestore.collection("usuarios")
+                .document(usuarioId)
+                .get()
+                .await()
+
+            if (!usuarioDoc.exists()) {
+                return Result.failure(Exception("Usuario no encontrado"))
+            }
+
+            val emailUsuario = usuarioDoc.getString("email") ?: ""
+
+            // 2. Eliminar reportes del usuario (opcional pero recomendado)
+            try {
+                val reportesSnapshot = firestore.collection("reportes")
+                    .whereEqualTo("usuarioId", usuarioId)
+                    .get()
+                    .await()
+
+                val batch = firestore.batch()
+                reportesSnapshot.documents.forEach { documento ->
+                    batch.delete(documento.reference)
+                    Log.d("ELIMINAR_CUENTA", "Marcado para eliminar reporte: ${documento.id}")
+                }
+                batch.commit().await()
+                Log.d("ELIMINAR_CUENTA", "Reportes del usuario eliminados")
+            } catch (e: Exception) {
+                Log.w("ELIMINAR_CUENTA", "No se pudieron eliminar reportes: ${e.message}")
+                // Continuamos aunque falle
+            }
+
+            // 3. Eliminar notificaciones del usuario
+            try {
+                val notificacionesSnapshot = firestore.collection("notificaciones")
+                    .whereEqualTo("usuarioId", usuarioId)
+                    .get()
+                    .await()
+
+                val batch = firestore.batch()
+                notificacionesSnapshot.documents.forEach { documento ->
+                    batch.delete(documento.reference)
+                }
+                batch.commit().await()
+                Log.d("ELIMINAR_CUENTA", "Notificaciones del usuario eliminadas")
+            } catch (e: Exception) {
+                Log.w("ELIMINAR_CUENTA", "No se pudieron eliminar notificaciones: ${e.message}")
+            }
+
+            // 4. Eliminar el usuario
+            firestore.collection("usuarios")
+                .document(usuarioId)
+                .delete()
+                .await()
+
+            Log.d("ELIMINAR_CUENTA", "Usuario eliminado exitosamente")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ELIMINAR_CUENTA", "Error al eliminar cuenta: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    private fun com.google.firebase.firestore.DocumentSnapshot.toUsuario(): Usuario? {
+        return try {
+            val id = getString("id") ?: this.id
+            val email = getString("email") ?: ""
+            val nombre = getString("nombre") ?: ""
+            val rolString = getString("rol") ?: RolUsuario.USUARIO.name
+            val rol = try {
+                RolUsuario.valueOf(rolString)
+            } catch (e: Exception) {
+                RolUsuario.USUARIO
+            }
+            val imagenPerfil = getString("imagenPerfil")
+            val fechaCreacion = getLong("fechaCreacion") ?: System.currentTimeMillis()
+            val estaActivo = getBoolean("estaActivo") ?: true
+
+            Log.d("FIREBASE_DEBUG", "🔄 Convirtiendo documento: $id")
+            Log.d("FIREBASE_DEBUG", "   📧 Email: $email")
+            Log.d("FIREBASE_DEBUG", "   👤 Nombre: $nombre")
+            Log.d("FIREBASE_DEBUG", "   🎯 Rol: $rol")
+            Log.d("FIREBASE_DEBUG", "   📅 Fecha: $fechaCreacion")
+            Log.d("FIREBASE_DEBUG", "   ✅ Activo: $estaActivo")
+
+            Usuario(
+                id = id,
+                email = email,
+                nombre = nombre,
+                rol = rol,
+                imagenPerfil = imagenPerfil,
+                fechaCreacion = fechaCreacion,
+                estaActivo = estaActivo
+            )
+        } catch (e: Exception) {
+            Log.e("FIREBASE_DEBUG", "❌ ERROR en toUsuario(): ${e.message}")
+            Log.e("FIREBASE_DEBUG", "📝 Datos del documento: ${this.data}")
+            null
+        }
+    }
+}
+```
+```
+```
+
+
+
+
+
+
+
