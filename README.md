@@ -48,24 +48,13 @@ Características principales
 🗂️ Historial de reportes realizados por el usuario.
 ---
 
-# 🛠️ Tecnologías usadas
-Frontend / App
-
-Android Studio (Java/Kotlin según tu proyecto)
-
-XML para interfaces
-
-Google Maps API
-
-Firebase Storage (si lo usas para imágenes)
-
-Firebase Authentication / Firestore (si aplica)
-
-Backend
-
-API REST (si existiera en el proyecto)
-
-Firebase Realtime Database o Firestore (según integración)
+## 🛠️ Tecnologías Usadas
+- Kotlin
+- Android Studio
+- Firebase Realtime Database / Firestore
+- Firebase Storage
+- Google Maps API
+- Material Design 3
 
 
 # 🚀 Instalación / Cómo ejecutar
