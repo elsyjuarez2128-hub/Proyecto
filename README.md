@@ -80,7 +80,9 @@ Configurar Firebase (Authentication, Firestore, Storage)
 
 Conectar un dispositivo físico o usar un emulador
 
-Presionar ▶️ Run
+Presionar
+
+▶️ Run
 
 ## 📁 Estructura de Paquetes
 ### **1. Capa de Datos (`datos/`)**
@@ -12080,7 +12082,6479 @@ fun EstadisticaItem(valor: String, etiqueta: String) {
 ```
 # PantallaRegistro
 ```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.EstadoAutenticacion
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAutenticacion
+/**
+ * Pantalla de registro para nuevos usuarios
+ * Permite crear una cuenta con información personal básica
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja el registro
+ * @param onRegisterSuccess Callback cuando el registro es exitoso
+ * @param onNavigateToLogin Callback para navegar al login
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaRegistro(
+    onRegistroExitoso: () -> Unit,
+    onNavegarAtras: () -> Unit,
+    viewModel: ViewModelAutenticacion = hiltViewModel()
+) {
+
+    /**
+     * Componente de términos y condiciones
+     *
+     * @param accepted Indica si los términos fueron aceptados
+     * @param onAcceptChange Callback cuando cambia la aceptación
+     * @param onViewTerms Click para ver los términos completos
+     */   
+    var nombre by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var contrasena by remember { mutableStateOf("") }
+    var confirmarContrasena by remember { mutableStateOf("") }
+    var mostrarError by remember { mutableStateOf(false) }
+    var mensajeError by remember { mutableStateOf("") }
+
+    val estadoUI by viewModel.estadoUI.collectAsState()
+    val contexto = LocalContext.current
+
+    LaunchedEffect(estadoUI) {
+        when (estadoUI) {
+            is EstadoAutenticacion.Exito -> {
+                onRegistroExitoso()
+            }
+            is EstadoAutenticacion.Error -> {
+                mostrarError = true
+                mensajeError = (estadoUI as EstadoAutenticacion.Error).mensaje
+            }
+            else -> {}
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Crear Cuenta") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { paddingValores ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValores)
+                .padding(24.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Únete a la Comunidad",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+
+            OutlinedTextField(
+                value = nombre,
+                onValueChange = {
+                    nombre = it
+                    mostrarError = false
+                },
+                label = { Text("Nombre completo") },
+                leadingIcon = {
+                    Icon(Icons.Default.Person, contentDescription = "Nombre")
+                },
+                isError = mostrarError && nombre.isBlank(),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                    mostrarError = false
+                },
+                label = { Text("Correo electrónico") },
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = "Email")
+                },
+                isError = mostrarError && (email.isBlank() || !esEmailValido(email)),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = contrasena,
+                onValueChange = {
+                    contrasena = it
+                    mostrarError = false
+                },
+                label = { Text("Contraseña") },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = "Contraseña")
+                },
+                visualTransformation = PasswordVisualTransformation(),
+                isError = mostrarError && (contrasena.length < 6),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            if (mostrarError && contrasena.length < 6) {
+                Text(
+                    text = "La contraseña debe tener al menos 6 caracteres",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = confirmarContrasena,
+                onValueChange = {
+                    confirmarContrasena = it
+                    mostrarError = false
+                },
+                label = { Text("Confirmar contraseña") },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = "Confirmar contraseña")
+                },
+                visualTransformation = PasswordVisualTransformation(),
+                isError = mostrarError && (contrasena != confirmarContrasena),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            if (mostrarError && contrasena != confirmarContrasena) {
+                Text(
+                    text = "Las contraseñas no coinciden",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = {
+                    val (esValido, mensaje) = validarCampos(nombre, email, contrasena, confirmarContrasena)
+                    if (esValido) {
+                        viewModel.registrarUsuario(nombre, email, contrasena)
+                    } else {
+                        mostrarError = true
+                        mensajeError = mensaje
+                    }
+                },
+                enabled = estadoUI !is EstadoAutenticacion.Cargando,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                if (estadoUI is EstadoAutenticacion.Cargando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Registrarse", fontSize = 16.sp)
+                }
+            }
+
+            if (mostrarError && mensajeError.isNotBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = mensajeError,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "La contraseña debe tener al menos 6 caracteres",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+private fun validarCampos(
+    nombre: String,
+    email: String,
+    contrasena: String,
+    confirmarContrasena: String
+): Pair<Boolean, String> {
+    return when {
+        nombre.isBlank() -> Pair(false, "El nombre es requerido")
+        email.isBlank() -> Pair(false, "El email es requerido")
+        !esEmailValido(email) -> Pair(false, "Ingresa un email válido")
+        contrasena.length < 6 -> Pair(false, "La contraseña debe tener al menos 6 caracteres")
+        contrasena != confirmarContrasena -> Pair(false, "Las contraseñas no coinciden")
+        else -> Pair(true, "")
+    }
+}
+
+private fun esEmailValido(email: String): Boolean {
+    val patronEmail = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$")
+    return patronEmail.matches(email)
+}
 ```
+# PantallaReportesPublicos.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelReportesPublicos
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+/**
+ * Pantalla que muestra reportes públicos para usuarios no autenticados
+ * Permite ver reportes sin necesidad de tener una cuenta
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja reportes públicos
+ * @param onReportClick Callback cuando se hace clic en un reporte
+ * @param onNavigateToRegister Callback para invitar a registrarse
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaReportesPublicos(
+    onNavegarAtras: () -> Unit,
+    viewModel: ViewModelReportesPublicos = hiltViewModel()
+) {
+    val reportes by viewModel.reportesPublicos.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarReportesPublicos()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Reportes Públicos") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, "Regresar")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO: Implementar búsqueda */ }) {
+                        Icon(Icons.Default.Search, "Buscar")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        if (estaCargando) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (reportes.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No hay reportes públicos disponibles")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(reportes) { reporte ->
+                    TarjetaReportePublico(reporte = reporte)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TarjetaReportePublico(reporte: mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = reporte.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                BadgeEstado(estado = reporte.estado)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = reporte.descripcion,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 3
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Tipo: ${when (reporte.tipo) {
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.BACHE -> "Bache"
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.ALUMBRADO -> "Alumbrado"
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.BASURA -> "Basura"
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.AGUA -> "Agua"
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.OTRO -> "Otro"
+                    }}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = "Gravedad: ${reporte.gravedad}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ✅ SOLO NOMBRE DEL USUARIO PARA PÚBLICO
+            Text(
+                text = "Reportado por: ${reporte.usuarioNombre.ifBlank { "Usuario anónimo" }}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Fecha: ${formatearFechaSimple(reporte.fechaCreacion)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// Función auxiliar para formatear fecha
+private fun formatearFechaSimple(tiempoMillis: Long): String {
+    val fecha = Date(tiempoMillis)
+    val formateador = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    return formateador.format(fecha)
+}
+```
+# Presentacion - Componentes
+# BotonCarga.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+/**
+ * Componente de botón con estado de carga integrado
+ * Muestra un indicador de carga cuando está procesando
+ *
+ * @param text Texto del botón
+ * @param isLoading Indica si está en estado de carga
+ * @param enabled Indica si el botón está habilitado
+ * @param onClick Callback cuando se hace clic en el botón
+ * @param modifier Modificador para personalizar el layout
+ * @param loadingText Texto alternativo durante la carga
+ */
+@Composable
+fun BotonCarga(
+    texto: String,
+    onClick: () -> Unit,
+    modificador: Modifier = Modifier,
+    estaCargando: Boolean = false,
+    habilitado: Boolean = true,
+    tipo: TipoBoton = TipoBoton.PRIMARIO
+) {
+    val colors = when (tipo) {
+        TipoBoton.PRIMARIO -> ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+        TipoBoton.SECUNDARIO -> ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary
+        )
+        TipoBoton.ERROR -> ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError
+        )
+    }
+
+    Button(
+        onClick = onClick,
+        modifier = modificador
+            .fillMaxWidth()
+            .height(56.dp),
+        enabled = habilitado && !estaCargando,
+        colors = colors
+    ) {
+        if (estaCargando) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = when (tipo) {
+                        TipoBoton.PRIMARIO -> MaterialTheme.colorScheme.onPrimary
+                        TipoBoton.SECUNDARIO -> MaterialTheme.colorScheme.onSecondary
+                        TipoBoton.ERROR -> MaterialTheme.colorScheme.onError
+                    },
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Cargando...",
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        } else {
+            Text(
+                text = texto,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+enum class TipoBoton {
+    PRIMARIO, SECUNDARIO, ERROR
+}
+/**
+ * Botón de carga con variante de contorno
+ *
+ * @param text Texto del botón
+ * @param isLoading Indica si está cargando
+ * @param onClick Callback al hacer clic
+ * @param modifier Modificador para personalizar
+ */
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewBotonCargaNormal() {
+    MaterialTheme {
+        BotonCarga(
+            texto = "Iniciar Sesión",
+            onClick = { }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewBotonCargaCargando() {
+    MaterialTheme {
+        BotonCarga(
+            texto = "Iniciar Sesión",
+            onClick = { },
+            estaCargando = true
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewBotonCargaSecundario() {
+    MaterialTheme {
+        BotonCarga(
+            texto = "Cancelar",
+            onClick = { },
+            tipo = TipoBoton.SECUNDARIO
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewBotonCargaError() {
+    MaterialTheme {
+        BotonCarga(
+            texto = "Eliminar",
+            onClick = { },
+            tipo = TipoBoton.ERROR
+        )
+    }
+}
+```
+# CampoTextoPersonalizado.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
+/**
+ * Componente personalizado de campo de texto con validaciones y estados integrados
+ * Soporta diferentes tipos de entrada (texto, número, email, contraseña, etc.)
+ *
+ * @param value Valor actual del campo de texto
+ * @param onValueChange Callback cuando cambia el valor
+ * @param label Etiqueta del campo
+ * @param placeholder Texto de marcador de posición (opcional)
+ * @param isError Indica si hay un error en el campo
+ * @param errorMessage Mensaje de error a mostrar (opcional)
+ * @param keyboardOptions Opciones del teclado para el tipo de entrada
+ * @param visualTransformation Transformación visual del texto (para contraseñas)
+ * @param modifier Modificador para personalizar el layout
+ * @param maxLines Número máximo de líneas (para campos multilínea)
+ * @param enabled Indica si el campo está habilitado
+ */
+@Composable
+fun CampoTextoPersonalizado(
+    valor: String,
+    onValorCambiado: (String) -> Unit,
+    etiqueta: String,
+    modificador: Modifier = Modifier,
+    iconoInicial: ImageVector? = null,
+    esContrasena: Boolean = false,
+    tipoTeclado: KeyboardType = KeyboardType.Text,
+    accionTeclado: ImeAction = ImeAction.Next,
+    onAccionTeclado: () -> Unit = {},
+    esError: Boolean = false,
+    mensajeError: String? = null,
+    habilitado: Boolean = true,
+    maxCaracteres: Int? = null,
+    esRequerido: Boolean = false
+) {
+    var contrasenaVisible by remember { mutableStateOf(false) }
+
+    // Validar si se excede el máximo de caracteres
+    val caracteresExcedidos = maxCaracteres?.let { max ->
+        valor.length > max
+    } ?: false
+
+    val errorFinal = esError || caracteresExcedidos
+    val mensajeErrorFinal = when {
+        caracteresExcedidos -> "Máximo $maxCaracteres caracteres"
+        esError && mensajeError != null -> mensajeError
+        else -> null
+    }
+
+    OutlinedTextField(
+        value = valor,
+        onValueChange = { nuevoValor ->
+            if (maxCaracteres == null || nuevoValor.length <= maxCaracteres) {
+                onValorCambiado(nuevoValor)
+            }
+        },
+        label = {
+            Text(
+                text = if (esRequerido) "$etiqueta *" else etiqueta,
+                color = if (errorFinal) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        modifier = modificador.fillMaxWidth(),
+        leadingIcon = if (iconoInicial != null) {
+            {
+                Icon(
+                    imageVector = iconoInicial,
+                    contentDescription = null,
+                    tint = if (errorFinal) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else null,
+        trailingIcon = {
+            if (esContrasena) {
+                IconButton(onClick = { contrasenaVisible = !contrasenaVisible }) {
+                    Icon(
+                        imageVector = if (contrasenaVisible)
+                            Icons.Filled.Visibility
+                        else
+                            Icons.Filled.VisibilityOff,
+                        contentDescription = if (contrasenaVisible)
+                            "Ocultar contraseña"
+                        else
+                            "Mostrar contraseña",
+                        tint = if (errorFinal) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (maxCaracteres != null) {
+                Text(
+                    text = "${valor.length}/$maxCaracteres",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (caracteresExcedidos) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        visualTransformation = if (esContrasena && !contrasenaVisible)
+            PasswordVisualTransformation()
+        else
+            VisualTransformation.None,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = tipoTeclado,
+            imeAction = accionTeclado
+        ),
+        keyboardActions = KeyboardActions(
+            onAny = { onAccionTeclado() }
+        ),
+        isError = errorFinal,
+        supportingText = {
+            if (mensajeErrorFinal != null) {
+                Text(
+                    text = mensajeErrorFinal,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        },
+        enabled = habilitado,
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = if (errorFinal) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = if (errorFinal) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.outline,
+            errorBorderColor = MaterialTheme.colorScheme.error,
+            focusedLabelColor = if (errorFinal) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.primary,
+        )
+    )
+}
+
+/**
+ * Campo de texto especializado para emails con validación automática
+ *
+ * @param value Valor del email
+ * @param onValueChange Callback cuando cambia el email
+ * @param isError Indica si hay error de formato
+ */
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCampoTextoNormal() {
+    MaterialTheme {
+        CampoTextoPersonalizado(
+            valor = "",
+            onValorCambiado = { },
+            etiqueta = "Correo electrónico",
+            iconoInicial = Icons.Default.Email
+        )
+    }
+}
+/**
+ * Campo de texto para contraseñas con visibilidad toggle
+ *
+ * @param value Valor de la contraseña
+ * @param onValueChange Callback cuando cambia la contraseña
+ * @param showPassword Indica si mostrar la contraseña
+ * @param onShowPasswordToggle Callback para alternar visibilidad
+ */
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCampoTextoContrasena() {
+    MaterialTheme {
+        CampoTextoPersonalizado(
+            valor = "micontraseña",
+            onValorCambiado = { },
+            etiqueta = "Contraseña",
+            esContrasena = true
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCampoTextoError() {
+    MaterialTheme {
+        CampoTextoPersonalizado(
+            valor = "emailinvalido",
+            onValorCambiado = { },
+            etiqueta = "Correo electrónico",
+            esError = true,
+            mensajeError = "Email no válido"
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCampoTextoMaxCaracteres() {
+    MaterialTheme {
+        CampoTextoPersonalizado(
+            valor = "Texto muy largo",
+            onValorCambiado = { },
+            etiqueta = "Nombre",
+            maxCaracteres = 10,
+            iconoInicial = Icons.Default.Person
+        )
+    }
+}
+```
+# ComponentesEstadistica.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.FiltrosEstadisticas
+import kotlin.math.min
+/**
+ * Componente de tarjeta de estadística para mostrar métricas numéricas
+ * Ideal para dashboards y resúmenes de datos
+ *
+ * @param title Título de la estadística
+ * @param value Valor numérico a mostrar
+ * @param unit Unidad de medida (opcional)
+ * @param subtitle Subtítulo o descripción adicional
+ * @param icon Icono representativo (opcional)
+ * @param backgroundColor Color de fondo de la tarjeta
+ * @param textColor Color del texto
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DialogoFiltros(
+    filtrosActuales: FiltrosEstadisticas,
+    onFiltrosActualizados: (FiltrosEstadisticas) -> Unit,
+    onLimpiarFiltros: () -> Unit,
+    onCancelar: () -> Unit
+) {
+    var tipoSeleccionado by remember { mutableStateOf(filtrosActuales.tipo) }
+    var estadoSeleccionado by remember { mutableStateOf(filtrosActuales.estado) }
+    var gravedadSeleccionada by remember { mutableStateOf(filtrosActuales.gravedad) }
+
+    Dialog(onDismissRequest = onCancelar) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 500.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    "Filtrar Estadísticas",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                Text(
+                    "Tipo de Reporte",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                TipoReporte.values().forEach { tipo ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = tipoSeleccionado == tipo,
+                            onClick = {
+                                tipoSeleccionado = if (tipoSeleccionado == tipo) null else tipo
+                            }
+                        )
+                        Text(
+                            text = tipo.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "Estado del Reporte",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                EstadoReporte.values().forEach { estado ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = estadoSeleccionado == estado,
+                            onClick = {
+                                estadoSeleccionado = if (estadoSeleccionado == estado) null else estado
+                            }
+                        )
+                        Text(
+                            text = estado.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "Gravedad",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                val nivelesGravedad = listOf("Baja", "Media", "Alta", "Crítica")
+                nivelesGravedad.forEach { gravedad ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = gravedadSeleccionada == gravedad,
+                            onClick = {
+                                gravedadSeleccionada = if (gravedadSeleccionada == gravedad) null else gravedad
+                            }
+                        )
+                        Text(
+                            text = gravedad,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onLimpiarFiltros) {
+                        Text("Limpiar")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = onCancelar) {
+                        Text("Cancelar")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            onFiltrosActualizados(
+                                FiltrosEstadisticas(
+                                    fechaInicio = filtrosActuales.fechaInicio,
+                                    fechaFin = filtrosActuales.fechaFin,
+                                    tipo = tipoSeleccionado,
+                                    estado = estadoSeleccionado,
+                                    gravedad = gravedadSeleccionada
+                                )
+                            )
+                        }
+                    ) {
+                        Text("Aplicar")
+                    }
+                }
+            }
+        }
+    }
+}
+/**
+ * Componente de gráfico de barras simple para estadísticas
+ *
+ * @param data Lista de datos a graficar
+ * @param labels Etiquetas para cada barra
+ * @param maxValue Valor máximo para escala
+ * @param barColor Color de las barras
+ */
+@Composable
+fun GraficaBarrasTipoReal(distribucion: Map<TipoReporte, Int>) {
+    if (distribucion.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "No hay datos para mostrar",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    // Definir el orden FIJO de los tipos - ESTO ES CRÍTICO
+    val ordenTipos = listOf(
+        TipoReporte.BACHE,
+        TipoReporte.ALUMBRADO,
+        TipoReporte.BASURA,
+        TipoReporte.AGUA,
+        TipoReporte.OTRO
+    )
+
+    // Ordenar los datos según el orden definido
+    val tiposOrdenados = ordenTipos.map { tipo ->
+        tipo to (distribucion[tipo] ?: 0)
+    }
+
+    val maxValue = tiposOrdenados.maxOfOrNull { it.second } ?: 1
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(350.dp)
+            .padding(16.dp)
+    ) {
+        // Canvas para las barras
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                val barWidth = size.width / (tiposOrdenados.size * 2)
+                val maxBarHeight = size.height * 0.7f
+                val spacing = barWidth / 2
+
+                tiposOrdenados.forEachIndexed { index, (tipo, cantidad) ->
+                    val barHeight = (cantidad.toFloat() / maxValue) * maxBarHeight
+                    val x = spacing + index * (barWidth + spacing)
+                    val y = size.height - barHeight
+
+                    // Dibujar barra
+                    drawRect(
+                        color = obtenerColorTipo(tipo),
+                        topLeft = Offset(x, y),
+                        size = Size(barWidth, barHeight),
+                        style = Fill
+                    )
+
+                    // Borde de la barra
+                    drawRect(
+                        color = Color.Black,
+                        topLeft = Offset(x, y),
+                        size = Size(barWidth, barHeight),
+                        style = Stroke(width = 1f)
+                    )
+                }
+            }
+        }
+
+        // Leyenda - USAR NOMBRES MÁS CORTOS y mejor espaciado
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(17.dp)
+        ) {
+            tiposOrdenados.forEachIndexed { index, (tipo, cantidad) ->
+                Box(
+                    modifier = Modifier.width(48.dp), // Ancho fijo para cada columna
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = obtenerNombreTipoSuperCorto(tipo), // ¡NOMBRE SUPER CORTO!
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 9.sp, // Tamaño más pequeño
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            lineHeight = 10.sp
+                        )
+                        Text(
+                            text = cantidad.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+/**
+ * Componente de indicador de progreso circular para porcentajes
+ *
+ * @param percentage Porcentaje a mostrar (0-100)
+ * @param label Etiqueta del porcentaje
+ * @param size Tamaño del indicador
+ */
+
+@Composable
+fun GraficaPastelEstadoReal(distribucion: Map<EstadoReporte, Int>) {
+    if (distribucion.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "No hay datos para mostrar",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    // Definir el orden FIJO de los estados
+    val ordenEstados = listOf(
+        EstadoReporte.PENDIENTE,
+        EstadoReporte.APROBADO,
+        EstadoReporte.RECHAZADO,
+        EstadoReporte.RESUELTO
+    )
+
+    val total = distribucion.values.sum().toFloat()
+    // Ordenar según el orden definido y filtrar los que tienen 0
+    val estadosOrdenados = ordenEstados.map { estado ->
+        estado to (distribucion[estado] ?: 0)
+    }.filter { it.second > 0 }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(350.dp)
+            .padding(16.dp)
+    ) {
+        // Gráfica de pastel
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .size(150.dp)
+            ) {
+                val center = Offset(size.width / 2, size.height / 2)
+                val radius = min(size.width, size.height) / 2
+                var startAngle = -90f
+
+                estadosOrdenados.forEach { (estado, cantidad) ->
+                    val sweepAngle = (cantidad / total) * 360f
+                    val color = obtenerColorEstado(estado)
+
+                    drawArc(
+                        color = color,
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = true,
+                        topLeft = Offset(center.x - radius, center.y - radius),
+                        size = Size(radius * 2, radius * 2),
+                        style = Fill
+                    )
+
+                    drawArc(
+                        color = Color.Black,
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = true,
+                        topLeft = Offset(center.x - radius, center.y - radius),
+                        size = Size(radius * 2, radius * 2),
+                        style = Stroke(width = 1f)
+                    )
+
+                    startAngle += sweepAngle
+                }
+            }
+        }
+
+        // Leyenda
+        Column(
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            estadosOrdenados.forEach { (estado, cantidad) ->
+                val porcentaje = if (total > 0) (cantidad * 100 / total) else 0
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(
+                                color = obtenerColorEstado(estado),
+                                shape = CircleShape
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = obtenerNombreEstadoCorto(estado), // Nombre corto para estados
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "$cantidad (${porcentaje.toInt()}%)",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GraficaLineasTendenciaReal(tendencia: Map<String, Int>) {
+    if (tendencia.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "No hay datos para mostrar",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    // Convertir a lista ordenada por clave (fecha)
+    val datosOrdenados = tendencia.toList()
+        .sortedBy { (clave, _) ->
+            val partes = clave.split(" ")
+            val mes = when(partes[0]) {
+                "Ene" -> 1; "Feb" -> 2; "Mar" -> 3; "Abr" -> 4
+                "May" -> 5; "Jun" -> 6; "Jul" -> 7; "Ago" -> 8
+                "Sep" -> 9; "Oct" -> 10; "Nov" -> 11; "Dic" -> 12
+                else -> 0
+            }
+            val año = partes[1].toInt()
+            año * 100 + mes
+        }
+
+    val valores = datosOrdenados.map { it.second }
+    val etiquetas = datosOrdenados.map { it.first }
+    val maxValue = valores.maxOrNull() ?: 1
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+            .padding(16.dp)
+    ) {
+        // Gráfica de líneas
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                val chartHeight = size.height * 0.7f
+                val chartWidth = size.width * 0.8f
+                val startX = size.width * 0.1f
+                val startY = size.height * 0.1f
+
+                // Líneas de guía horizontales
+                for (i in 0..4) {
+                    val y = startY + (chartHeight / 4) * i
+                    drawLine(
+                        color = Color.Gray.copy(alpha = 0.3f),
+                        start = Offset(startX, y),
+                        end = Offset(startX + chartWidth, y),
+                        strokeWidth = 1f
+                    )
+                }
+
+                // Puntos de la línea
+                val points = valores.mapIndexed { index, value ->
+                    val x = startX + (chartWidth / (valores.size - 1)) * index
+                    val y = startY + chartHeight - (value.toFloat() / maxValue) * chartHeight
+                    Offset(x, y)
+                }
+
+                // Dibujar líneas
+                if (points.size > 1) {
+                    for (i in 0 until points.size - 1) {
+                        drawLine(
+                            color = Color(0xFF2196F3),
+                            start = points[i],
+                            end = points[i + 1],
+                            strokeWidth = 3f
+                        )
+                    }
+                }
+
+                // Dibujar puntos
+                points.forEach { point ->
+                    drawCircle(
+                        color = Color(0xFF2196F3),
+                        center = point,
+                        radius = 5f
+                    )
+                }
+            }
+        }
+
+        // Etiquetas en el eje X - MEJOR ESPACIADO
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(30.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            etiquetas.forEach { etiqueta ->
+                Box(
+                    modifier = Modifier.width(50.dp), // Ancho fijo
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = etiqueta,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 8.sp, // Más pequeño
+                        maxLines = 2,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 9.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun obtenerColorTipo(tipo: TipoReporte): Color {
+    return when (tipo) {
+        TipoReporte.BACHE -> Color(0xFFFF6B6B)
+        TipoReporte.ALUMBRADO -> Color(0xFF4ECDC4)
+        TipoReporte.BASURA -> Color(0xFF45B7D1)
+        TipoReporte.AGUA -> Color(0xFF96CEB4)
+        TipoReporte.OTRO -> Color(0xFFFFEAA7)
+    }
+}
+
+private fun obtenerColorEstado(estado: EstadoReporte): Color {
+    return when (estado) {
+        EstadoReporte.PENDIENTE -> Color(0xFFFFA000)
+        EstadoReporte.APROBADO -> Color(0xFF4CAF50)
+        EstadoReporte.RECHAZADO -> Color(0xFFF44336)
+        EstadoReporte.RESUELTO -> Color(0xFF2196F3)
+    }
+}
+
+private fun obtenerNombreEstado(estado: EstadoReporte): String {
+    return when (estado) {
+        EstadoReporte.PENDIENTE -> "Pendiente"
+        EstadoReporte.APROBADO -> "Aprobado"
+        EstadoReporte.RECHAZADO -> "Rechazado"
+        EstadoReporte.RESUELTO -> "Resuelto"
+    }
+}
+
+private fun obtenerNombreEstadoCorto(estado: EstadoReporte): String {
+    return when (estado) {
+        EstadoReporte.PENDIENTE -> "Pend."
+        EstadoReporte.APROBADO -> "Aprob."
+        EstadoReporte.RECHAZADO -> "Rech."
+        EstadoReporte.RESUELTO -> "Resuel."
+    }
+}
+
+private fun obtenerNombreTipoCorto(tipo: TipoReporte): String {
+    return when (tipo) {
+        TipoReporte.BACHE -> "Baches"
+        TipoReporte.ALUMBRADO -> "Alumbrado"
+        TipoReporte.BASURA -> "Basura"
+        TipoReporte.AGUA -> "Agua"
+        TipoReporte.OTRO -> "Otros"
+    }
+}
+
+// ¡NUEVA FUNCIÓN! - NOMBRES SUPER CORTOS
+private fun obtenerNombreTipoSuperCorto(tipo: TipoReporte): String {
+    return when (tipo) {
+        TipoReporte.BACHE -> "Baches"
+        TipoReporte.ALUMBRADO -> "Alumb." // ¡MUCHO MÁS CORTO!
+        TipoReporte.BASURA -> "Basura"
+        TipoReporte.AGUA -> "Agua"
+        TipoReporte.OTRO -> "Otros"
+    }
+}
+```
+# DialogoComentario.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
+
+/**
+ * Diálogo para agregar o editar comentarios
+ * Se utiliza para que los usuarios agreguen comentarios a reportes u otros elementos
+ *
+ * @param title Título del diálogo
+ * @param initialText Texto inicial del comentario (para edición)
+ * @param onDismiss Callback cuando se cierra el diálogo
+ * @param onSave Callback cuando se guarda el comentario
+ * @param isSaving Indica si se está guardando el comentario
+ * @param maxLength Longitud máxima permitida para el comentario
+ */
+@Composable
+fun DialogoComentario(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    textoExistente: String = "",
+    esEdicion: Boolean = false
+) {
+    var textoComentario by remember { mutableStateOf(textoExistente) }
+    var tieneFoco by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (esEdicion) "Editar comentario" else "Agregar comentario") },
+        text = {
+            Column {
+                BasicTextField(
+                    value = textoComentario,
+                    onValueChange = { textoComentario = it },
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .onFocusChanged { tieneFoco = it.isFocused },
+                    decorationBox = { innerTextField ->
+                        if (textoComentario.isEmpty() && !tieneFoco) {
+                            Text(
+                                "Escribe tu comentario aquí...",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "${textoComentario.length}/500",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (textoComentario.length > 500) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Row {
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text("Cancelar")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        if (textoComentario.isNotBlank() && textoComentario.length <= 500) {
+                            onConfirm(textoComentario)
+                        }
+                    },
+                    enabled = textoComentario.isNotBlank() && textoComentario.length <= 500
+                ) {
+                    Text(if (esEdicion) "Guardar" else "Comentar")
+                }
+            }
+        }
+    )
+}
+```
+# DialogoError
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
+/**
+ * Diálogo genérico para mostrar errores al usuario
+ * Proporciona una forma consistente de mostrar mensajes de error
+ *
+ * @param title Título del error
+ * @param message Mensaje de error detallado
+ * @param onDismiss Callback cuando se cierra el diálogo
+ * @param primaryButtonText Texto del botón principal (opcional)
+ * @param secondaryButtonText Texto del botón secundario (opcional)
+ * @param onPrimaryButtonClick Callback del botón principal
+ * @param onSecondaryButtonClick Callback del botón secundario
+ * @param isDismissible Indica si se puede cerrar tocando fuera
+ */
+@Composable
+fun DialogoError(
+    titulo: String = "Error",
+    mensaje: String,
+    icono: ImageVector = Icons.Filled.Error,
+    tipoDialogo: TipoDialogo = TipoDialogo.ERROR,
+    textoConfirmar: String = "Aceptar",
+    textoCancelar: String? = null,
+    onCerrar: () -> Unit,
+    onConfirmar: () -> Unit = onCerrar,
+    onCancelar: () -> Unit = onCerrar
+) {
+    /**
+     * Diálogo de error con opciones de reintento
+     *
+     * @param message Mensaje de error
+     * @param onRetry Callback para reintentar
+     * @param onDismiss Callback para cerrar
+     */
+    val colorIcono = when (tipoDialogo) {
+        TipoDialogo.ERROR -> MaterialTheme.colorScheme.error
+        TipoDialogo.ADVERTENCIA -> MaterialTheme.colorScheme.errorContainer
+        TipoDialogo.INFORMACION -> MaterialTheme.colorScheme.primary
+        TipoDialogo.EXITO -> Color(0xFF2E7D32) // Verde éxito
+    }
+
+    val textoConfirmarColor = when (tipoDialogo) {
+        TipoDialogo.ERROR -> MaterialTheme.colorScheme.error
+        TipoDialogo.ADVERTENCIA -> MaterialTheme.colorScheme.onErrorContainer
+        TipoDialogo.INFORMACION -> MaterialTheme.colorScheme.primary
+        TipoDialogo.EXITO -> Color(0xFF2E7D32)
+    }
+
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        icon = {
+            Icon(
+                imageVector = icono,
+                contentDescription = null,
+                tint = colorIcono
+            )
+        },
+        title = {
+            Text(
+                text = titulo,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Text(
+                text = mensaje,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirmar,
+                content = {
+                    Text(
+                        text = textoConfirmar,
+                        color = textoConfirmarColor
+                    )
+                }
+            )
+        },
+        dismissButton = if (textoCancelar != null) {
+            {
+                TextButton(onClick = onCancelar) {
+                    Text(
+                        text = textoCancelar,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else null
+    )
+}
+
+enum class TipoDialogo {
+    ERROR, ADVERTENCIA, INFORMACION, EXITO
+}
+
+/**
+ * Diálogo de error con detalles técnicos expandibles
+ *
+ * @param userMessage Mensaje amigable para el usuario
+ * @param technicalDetails Detalles técnicos (opcional)
+ * @param onDismiss Callback para cerrar
+ */
+@Preview(showBackground = true)
+@Composable
+fun PreviewDialogoError() {
+    MaterialTheme {
+        DialogoError(
+            titulo = "Error de conexión",
+            mensaje = "No se pudo conectar al servidor. Verifica tu conexión a internet.",
+            tipoDialogo = TipoDialogo.ERROR,
+            onCerrar = { }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewDialogoAdvertencia() {
+    MaterialTheme {
+        DialogoError(
+            titulo = "Eliminar reporte",
+            mensaje = "¿Estás seguro de que quieres eliminar este reporte? Esta acción no se puede deshacer.",
+            icono = Icons.Filled.Warning,
+            tipoDialogo = TipoDialogo.ADVERTENCIA,
+            textoConfirmar = "Eliminar",
+            textoCancelar = "Cancelar",
+            onCerrar = { }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewDialogoInformacion() {
+    MaterialTheme {
+        DialogoError(
+            titulo = "Información importante",
+            mensaje = "Tu reporte ha sido enviado exitosamente y está en revisión.",
+            icono = Icons.Filled.Info,
+            tipoDialogo = TipoDialogo.INFORMACION,
+            onCerrar = { }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewDialogoExito() {
+    MaterialTheme {
+        DialogoError(
+            titulo = "¡Éxito!",
+            mensaje = "Tu cuenta ha sido creada correctamente. Ya puedes iniciar sesión.",
+            tipoDialogo = TipoDialogo.EXITO,
+            onCerrar = { }
+        )
+    }
+}
+
+// ✅ DIALOGO SIMPLIFICADO PARA ERRORES COMUNES
+@Composable
+fun DialogoErrorSimple(
+    mensaje: String,
+    onCerrar: () -> Unit
+) {
+    DialogoError(
+        titulo = "Error",
+        mensaje = mensaje,
+        tipoDialogo = TipoDialogo.ERROR,
+        onCerrar = onCerrar
+    )
+}
+
+@Composable
+fun DialogoConfirmacion(
+    titulo: String,
+    mensaje: String,
+    onConfirmar: () -> Unit,
+    onCancelar: () -> Unit
+) {
+    DialogoError(
+        titulo = titulo,
+        mensaje = mensaje,
+        icono = Icons.Filled.Warning,
+        tipoDialogo = TipoDialogo.ADVERTENCIA,
+        textoConfirmar = "Confirmar",
+        textoCancelar = "Cancelar",
+        onCerrar = onCancelar,
+        onConfirmar = onConfirmar,
+        onCancelar = onCancelar
+    )
+}
+```
+# FondoconDegrado.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material3.MaterialTheme
+/**
+ * Componente de fondo con degradado que se puede reutilizar en diferentes pantallas
+ * Proporciona un fondo visualmente atractivo con degradados configurables
+ *
+ * @param colors Lista de colores para el degradado
+ * @param startOffset Inicio del degradado (0f a 1f en X)
+ * @param endOffset Fin del degradado (0f a 1f en Y)
+ * @param angle Ángulo del degradado en grados (opcional, anula start/end)
+ * @param modifier Modificador para personalizar el layout
+ * @param content Contenido a mostrar sobre el fondo
+ */
+@Composable
+fun FondoConDegradado(
+    modifier: Modifier = Modifier,
+    contenido: @Composable () -> Unit
+) {
+    val gradient = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.05f)
+        )
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(gradient)
+    ) {
+        contenido()
+    }
+}
+/**
+ * Fondo con degradado predefinido para pantallas de login/registro
+ *
+ * @param modifier Modificador para personalizar
+ * @param content Contenido a mostrar
+ */
+@Composable
+fun FondoConDegradadoSecundario(
+    modifier: Modifier = Modifier,
+    contenido: @Composable () -> Unit
+) {
+    val gradient = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.background
+        )
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(gradient)
+    ) {
+        contenido()
+    }
+}
+
+/**
+ * Fondo con degradado para pantallas principales
+ *
+ * @param modifier Modificador para personalizar
+ * @param content Contenido a mostrar
+ */
+@Composable
+fun TarjetaConDegradado(
+    modifier: Modifier = Modifier,
+    contenido: @Composable () -> Unit
+) {
+    val gradient = Brush.linearGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.surfaceVariant
+        )
+    )
+
+    Box(
+        modifier = modifier.background(gradient)
+    ) {
+        contenido()
+    }
+}
+```
+# SeccionComentarios.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.dp
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Comentario
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelComentarios
+import java.text.SimpleDateFormat
+import java.util.*
+/**
+ * Sección de comentarios para mostrar y agregar comentarios
+ * Se utiliza en pantallas de detalle de reportes y otros elementos
+ *
+ * @param comments Lista de comentarios a mostrar
+ * @param isLoading Indica si se están cargando comentarios
+ * @param onAddComment Callback para agregar un nuevo comentario
+ * @param onDeleteComment Callback para eliminar un comentario (solo para propietarios)
+ * @param currentUserId ID del usuario actual para determinar acciones disponibles
+ * @param showAddComment Indica si mostrar el campo para agregar comentarios
+ */
+@Composable
+fun SeccionComentarios(
+    comentarios: List<Comentario>,
+    cantidadComentarios: Int,
+    estadoUI: ViewModelComentarios.EstadoUI,
+    mensajeError: String?,
+    onAgregarComentario: (String) -> Unit,
+    onEliminarComentario: (String, String) -> Unit,
+    onLimpiarError: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var textoComentario by remember { mutableStateOf("") }
+    var estaEnviando by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        // Header de comentarios
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Comentarios ($cantidadComentarios)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        // Input para nuevo comentario
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = textoComentario,
+                    onValueChange = { textoComentario = it },
+                    label = { Text("Escribe un comentario...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    trailingIcon = {
+                        if (textoComentario.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    estaEnviando = true
+                                    onAgregarComentario(textoComentario)
+                                    textoComentario = ""
+                                    estaEnviando = false
+                                },
+                                enabled = !estaEnviando && textoComentario.isNotBlank()
+                            ) {
+                                if (estaEnviando) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Send,
+                                        contentDescription = "Enviar comentario",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        // Mostrar errores
+        mensajeError?.let { error ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = onLimpiarError
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Cerrar",
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+        }
+
+        // Lista de comentarios
+        when {
+            estadoUI is ViewModelComentarios.EstadoUI.Cargando && comentarios.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            comentarios.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Comment,
+                            contentDescription = "Sin comentarios",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(
+                            text = "No hay comentarios aún",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Sé el primero en comentar",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    items(comentarios, key = { it.id }) { comentario ->
+                        TarjetaComentario(
+                            comentario = comentario,
+                            onEliminarComentario = onEliminarComentario
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+/**
+ * Componente de item de comentario individual
+ *
+ * @param comentario Datos del comentario
+ * @param canDelete Indica si se puede eliminar este comentario
+ * @param onDeleteClick Callback para eliminar el comentario
+ */
+
+@Composable
+fun TarjetaComentario(
+    comentario: Comentario,
+    onEliminarComentario: (String, String) -> Unit
+) {
+    var mostrarDialogoEliminar by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Texto del comentario
+            Text(
+                text = comentario.texto,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Información del comentario
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Por: ${comentario.usuarioNombre}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = formatearFechaComentario(comentario.fecha),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (comentario.editado) {
+                        Text(
+                            text = "editado",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Botón de eliminar (solo para el autor)
+                // Aquí deberías verificar si el usuario actual es el autor
+                // Por ahora lo mostramos para todos para testing
+                IconButton(
+                    onClick = { mostrarDialogoEliminar = true },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Eliminar comentario",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    // Diálogo de confirmación para eliminar
+    if (mostrarDialogoEliminar) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoEliminar = false },
+            title = { Text("Eliminar comentario") },
+            text = { Text("¿Estás seguro de que quieres eliminar este comentario?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onEliminarComentario(comentario.id, comentario.usuarioId)
+                        mostrarDialogoEliminar = false
+                    }
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { mostrarDialogoEliminar = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+private fun formatearFechaComentario(tiempoMillis: Long): String {
+    val fecha = Date(tiempoMillis)
+    val formateador = SimpleDateFormat("dd/MM/yy 'a las' HH:mm", Locale.getDefault())
+    return formateador.format(fecha)
+}
+```
+# Selectorimagenes.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import mx.edu.utng.mrs.mycomunidad.R
+/**
+* Componente para seleccionar y previsualizar múltiples imágenes
+* Permite al usuario seleccionar imágenes desde la galería o cámara
+*
+* @param images Lista de URIs de imágenes seleccionadas
+* @param onImagesSelected Callback cuando se seleccionan nuevas imágenes
+* @param maxImages Número máximo de imágenes permitidas
+* @param onRemoveImage Callback para eliminar una imagen específica
+* @param enabled Indica si el selector está habilitado
+* @param modifier Modificador para personalizar el layout
+*/
+@Composable
+fun SelectorImagenes(
+    onAbrirCamara: () -> Unit,
+    onAbrirGaleria: () -> Unit,
+    modificador: Modifier = Modifier,
+    imagenesSeleccionadas: List<String> = emptyList(),
+    onEliminarImagen: (String) -> Unit = { },
+    maxImagenes: Int = 5,
+    mostrarVistaPrevia: Boolean = true
+) {
+    Column(
+        modifier = modificador.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onAbrirCamara,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline
+                ),
+                enabled = imagenesSeleccionadas.size < maxImagenes
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Abrir cámara",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Cámara",
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = onAbrirGaleria,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline
+                ),
+                enabled = imagenesSeleccionadas.size < maxImagenes
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Photo,
+                        contentDescription = "Abrir galería",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Galería",
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        if (maxImagenes > 0) {
+            Text(
+                text = "${imagenesSeleccionadas.size}/$maxImagenes imágenes",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.End)
+            )
+        }
+
+        if (mostrarVistaPrevia && imagenesSeleccionadas.isNotEmpty()) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(imagenesSeleccionadas) { imagenUrl ->
+                    TarjetaImagenSeleccionada(
+                        imagenUrl = imagenUrl,
+                        onEliminar = { onEliminarImagen(imagenUrl) }
+                    )
+                }
+            }
+        }
+
+        if (imagenesSeleccionadas.size >= maxImagenes) {
+            Text(
+                text = "Límite de $maxImagenes imágenes alcanzado",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        }
+    }
+}
+/**
+ * Componente simplificado para seleccionar una sola imagen
+ *
+ * @param imageUri URI de la imagen seleccionada (null si no hay imagen)
+ * @param onImageSelected Callback cuando se selecciona una imagen
+ * @param enabled Indica si el selector está habilitado
+ */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TarjetaImagenSeleccionada(
+    imagenUrl: String,
+    onEliminar: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .size(80.dp),
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imagenUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Imagen seleccionada",
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            IconButton(
+                onClick = onEliminar,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(24.dp)
+                    .padding(2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Eliminar imagen",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewSelectorImagenesVacio() {
+    MaterialTheme {
+        SelectorImagenes(
+            onAbrirCamara = { },
+            onAbrirGaleria = { },
+            modificador = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewSelectorImagenesConImagenes() {
+    MaterialTheme {
+        SelectorImagenes(
+            onAbrirCamara = { },
+            onAbrirGaleria = { },
+            imagenesSeleccionadas = listOf(
+                "https://example.com/image1.jpg",
+                "https://example.com/image2.jpg"
+            ),
+            onEliminarImagen = { },
+            modificador = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewSelectorImagenesLleno() {
+    MaterialTheme {
+        SelectorImagenes(
+            onAbrirCamara = { },
+            onAbrirGaleria = { },
+            imagenesSeleccionadas = listOf(
+                "https://example.com/image1.jpg",
+                "https://example.com/image2.jpg",
+                "https://example.com/image3.jpg",
+                "https://example.com/image4.jpg",
+                "https://example.com/image5.jpg"
+            ),
+            maxImagenes = 5,
+            onEliminarImagen = { },
+            modificador = Modifier.padding(16.dp)
+        )
+    }
+}
+```
+# TarjetaReporte
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.componentes
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Comentario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.tema.customColors
+import mx.edu.utng.mrs.mycomunidad.utilidades.FormateadorTiempo.obtenerTiempoTranscurrido
+/**
+ * Componente de tarjeta para mostrar resumen de un reporte en listas
+ * Proporciona una vista compacta con información esencial del reporte
+ *
+ * @param reporte Datos del reporte a mostrar
+ * @param onClick Callback cuando se hace clic en la tarjeta
+ * @param modifier Modificador para personalizar el layout
+ * @param showStatus Indica si mostrar el estado del reporte
+ * @param showUser Indica si mostrar información del usuario
+ * @param showDate Indica si mostrar la fecha del reporte
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TarjetaReporte(
+    reporte: Reporte,
+    onClic: () -> Unit,
+    onMeGusta: () -> Unit,
+    onComentar: () -> Unit,
+    estaLiked: Boolean = false,
+    puedeEditar: Boolean = false,
+    onEditar: () -> Unit = {},
+    onEliminar: () -> Unit = {},
+    usuarioActualId: String? = null,
+    esAdmin: Boolean = false
+) {
+    Card(
+        onClick = onClic,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = reporte.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                BadgeEstado(estado = reporte.estado)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = reporte.descripcion,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Ubicación",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (reporte.latitud != 0.0 && reporte.longitud != 0.0) {
+                        "📍 ${"%.4f".format(reporte.latitud)}, ${"%.4f".format(reporte.longitud)}"
+                    } else {
+                        "📍 Ubicación no especificada"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            BadgeTipoReporte(tipo = reporte.tipo)
+
+            if (reporte.comentarios.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                ComentariosSection(
+                    comentarios = reporte.comentarios,
+                    usuarioActualId = usuarioActualId,
+                    esAdmin = esAdmin,
+                    onEditarComentario = { comentarioId, nuevoContenido -> },
+                    onEliminarComentario = { comentarioId -> }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "👤 ${reporte.usuarioNombre}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "🕒 ${obtenerTiempoTranscurrido(reporte.fechaCreacion)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onMeGusta,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (estaLiked) Icons.Default.Favorite
+                            else Icons.Default.FavoriteBorder,
+                            contentDescription = if (estaLiked) "Quitar me gusta"
+                            else "Dar me gusta",
+                            tint = if (estaLiked) MaterialTheme.customColors.Error
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    IconButton(
+                        onClick = onComentar,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChatBubbleOutline,
+                            contentDescription = "Comentar",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (puedeEditar || esAdmin) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        MenuOpcionesReporte(
+                            puedeEditar = puedeEditar,
+                            puedeEliminar = puedeEditar || esAdmin,
+                            onEditar = onEditar,
+                            onEliminar = onEliminar
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${reporte.meGustas.size} 👍 • ${reporte.comentarios.size} 💬",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+/**
+ * Badge para mostrar el estado de un reporte con color apropiado
+ *
+ * @param estado Estado del reporte
+ * @param modifier Modificador para personalizar
+ */
+@Composable
+fun ComentariosSection(
+    comentarios: List<Comentario>,
+    usuarioActualId: String?,
+    esAdmin: Boolean = false,
+    onEditarComentario: (String, String) -> Unit,
+    onEliminarComentario: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Comentarios (${comentarios.size})",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        comentarios.take(2).forEach { comentario ->
+            ComentarioItem(
+                comentario = comentario,
+                usuarioActualId = usuarioActualId,
+                esAdmin = esAdmin,
+                onEditarComentario = onEditarComentario,
+                onEliminarComentario = onEliminarComentario
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        if (comentarios.size > 2) {
+            Text(
+                text = "+ ${comentarios.size - 2} comentarios más...",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+/**
+ * Badge para mostrar la prioridad de un reporte
+ *
+ * @param prioridad Nivel de prioridad
+ * @param modifier Modificador para personalizar
+ */
+@Composable
+fun ComentarioItem(
+    comentario: Comentario,
+    usuarioActualId: String?,
+    esAdmin: Boolean = false,
+    onEditarComentario: (String, String) -> Unit,
+    onEliminarComentario: (String) -> Unit
+) {
+    val puedeEditarComentario = comentario.usuarioId == usuarioActualId
+    val puedeEliminarComentario = comentario.usuarioId == usuarioActualId || esAdmin
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(12.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = comentario.usuarioNombre,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (puedeEditarComentario || puedeEliminarComentario) {
+                    MenuOpcionesComentario(
+                        puedeEditar = puedeEditarComentario,
+                        puedeEliminar = puedeEliminarComentario,
+                        onEditar = { onEditarComentario(comentario.id, comentario.texto) },
+                        onEliminar = { onEliminarComentario(comentario.id) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = comentario.texto,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = obtenerTiempoTranscurrido(comentario.fecha),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (comentario.editado) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "✏️ Editado",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+/**
+ * Tarjeta de reporte con diseño horizontal (para listas compactas)
+ *
+ * @param reporte Datos del reporte
+ * @param onClick Callback al hacer clic
+ * @param modifier Modificador para personalizar
+ */
+@Composable
+fun MenuOpcionesReporte(
+    puedeEditar: Boolean,
+    puedeEliminar: Boolean,
+    onEditar: () -> Unit,
+    onEliminar: () -> Unit
+) {
+    var mostrarMenu by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(
+            onClick = { mostrarMenu = true },
+            modifier = Modifier.size(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Opciones",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        DropdownMenu(
+            expanded = mostrarMenu,
+            onDismissRequest = { mostrarMenu = false }
+        ) {
+            if (puedeEditar) {
+                DropdownMenuItem(
+                    text = { Text("Editar") },
+                    onClick = {
+                        onEditar()
+                        mostrarMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Editar",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                )
+            }
+
+            if (puedeEliminar) {
+                DropdownMenuItem(
+                    text = { Text("Eliminar") },
+                    onClick = {
+                        onEliminar()
+                        mostrarMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Eliminar",
+                            tint = MaterialTheme.customColors.Error
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MenuOpcionesComentario(
+    puedeEditar: Boolean,
+    puedeEliminar: Boolean,
+    onEditar: () -> Unit,
+    onEliminar: () -> Unit
+) {
+    var mostrarMenu by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(
+            onClick = { mostrarMenu = true },
+            modifier = Modifier.size(20.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Opciones comentario",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = mostrarMenu,
+            onDismissRequest = { mostrarMenu = false }
+        ) {
+            if (puedeEditar) {
+                DropdownMenuItem(
+                    text = { Text("Editar") },
+                    onClick = {
+                        onEditar()
+                        mostrarMenu = false
+                    }
+                )
+            }
+
+            if (puedeEliminar) {
+                DropdownMenuItem(
+                    text = { Text("Eliminar") },
+                    onClick = {
+                        onEliminar()
+                        mostrarMenu = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BadgeEstado(estado: EstadoReporte) {
+    val configuracionEstado = when (estado) {
+        EstadoReporte.PENDIENTE -> Triple(
+            MaterialTheme.customColors.Pending.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Pending,
+            "Pendiente"
+        )
+        EstadoReporte.APROBADO -> Triple(
+            MaterialTheme.customColors.Approved.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Approved,
+            "Aprobado"
+        )
+        EstadoReporte.RECHAZADO -> Triple(
+            MaterialTheme.customColors.Rejected.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Rejected,
+            "Rechazado"
+        )
+        EstadoReporte.RESUELTO -> Triple(
+            MaterialTheme.customColors.Resolved.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Resolved,
+            "Resuelto"
+        )
+    }
+
+    val colorFondo = configuracionEstado.first
+    val colorTexto = configuracionEstado.second
+    val texto = configuracionEstado.third
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(colorFondo)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = texto,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = colorTexto
+        )
+    }
+}
+
+@Composable
+fun BadgeTipoReporte(tipo: TipoReporte) {
+    val configuracionTipo = when (tipo) {
+        TipoReporte.BACHE -> Triple(
+            MaterialTheme.customColors.Bache.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Bache,
+            "Bache"
+        )
+        TipoReporte.ALUMBRADO -> Triple(
+            MaterialTheme.customColors.Alumbrado.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Alumbrado,
+            "Alumbrado"
+        )
+        TipoReporte.BASURA -> Triple(
+            MaterialTheme.customColors.Basura.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Basura,
+            "Basura"
+        )
+        TipoReporte.AGUA -> Triple(
+            MaterialTheme.customColors.Agua.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Agua,
+            "Agua"
+        )
+        TipoReporte.OTRO -> Triple(
+            MaterialTheme.customColors.Otro.copy(alpha = 0.1f),
+            MaterialTheme.customColors.Otro,
+            "Otro"
+        )
+    }
+
+    val colorFondo = configuracionTipo.first
+    val colorTexto = configuracionTipo.second
+    val texto = configuracionTipo.third
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(colorFondo)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = texto,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = colorTexto
+        )
+    }
+}
+```
+# NavegacionPrincipal.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.navegacion
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.*
+import mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador.PantallaGestionUsuarios
+import mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador.PantallaPanelAdministrador
+import mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador.PantallaPerfilAdministrador
+import mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador.PantallaReportesAprobados
+import mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador.PantallaValidacionReportes
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAutenticacion
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelEditarReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelMisReportes
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelReportes
+/**
+ * Navegación principal de la aplicación que gestiona todas las rutas y transiciones
+ * Controla el flujo de navegación basado en el estado de autenticación y rol del usuario
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel principal que maneja el estado de la aplicación
+ * @param navController Controlador de navegación (si no se proporciona, se crea uno nuevo)
+ * @param startDestination Ruta inicial de la navegación
+ */
+@Composable
+fun NavegacionPrincipal(
+    navController: NavHostController,
+    viewModelAutenticacion: ViewModelAutenticacion = hiltViewModel()
+) {
+    val estadoSesion by viewModelAutenticacion.haySesionActiva.collectAsState()
+    val usuarioActual by viewModelAutenticacion.usuarioActual.collectAsState()
+
+    LaunchedEffect(estadoSesion) {
+        if (!estadoSesion) {
+            navController.navigate("visitante") {
+                popUpTo(0)
+            }
+        }
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = if (estadoSesion) "principal" else "visitante"
+    ) {
+
+        composable("visitante") {
+            PantallaBienvenida(
+                onIniciarSesion = { navController.navigate("login") },
+                onRegistrarse = { navController.navigate("registro") },
+                onEntrarComoVisitante = { navController.navigate("mapa_publico") }
+            )
+        }
+
+        composable("login") {
+            PantallaInicioSesion(
+                onInicioSesionExitoso = {
+                    navController.navigate("principal") { popUpTo(0) }
+                },
+                onNavegarAPanelAdmin = {
+                    navController.navigate("panel_administrador") { popUpTo(0) }
+                },
+                onNavegarAtras = { navController.popBackStack() },
+                viewModel = viewModelAutenticacion
+            )
+        }
+
+        composable("registro") {
+            PantallaRegistro(
+                onRegistroExitoso = {
+                    navController.navigate("principal") { popUpTo(0) }
+                },
+                onNavegarAtras = { navController.popBackStack() },
+                viewModel = viewModelAutenticacion
+            )
+        }
+
+        composable("mapa_publico") {
+            PantallaMapaPublico(
+                onNavegarAtras = { navController.popBackStack() }
+            )
+        }
+
+        composable("principal") {
+            PantallaPrincipal(
+                onCerrarSesion = {
+                    viewModelAutenticacion.cerrarSesion()
+                    navController.navigate("visitante") { popUpTo(0) }
+                },
+                onNavegarACrearReporte = { navController.navigate("crear_reporte") },
+                onNavegarAMapa = { navController.navigate("mapa") },
+                onNavegarAMisReportes = { navController.navigate("mis_reportes") },
+                onNavegarAReportesComunidad = { navController.navigate("reportes_comunidad") },
+                onNavegarAValidacion = { navController.navigate("validacion_reportes") },
+                onNavegarAPerfil = { navController.navigate("perfil") },
+                onNavegarANotificaciones = { navController.navigate("notificaciones") },
+                onNavegarAEstadisticas = { navController.navigate("estadisticas") },
+                esAdministrador = usuarioActual?.rol == RolUsuario.ADMINISTRADOR
+            )
+        }
+
+        composable("notificaciones") {
+            PantallaNotificaciones(
+                onNavegarAtras = { navController.popBackStack() }
+            )
+        }
+
+        composable("perfil") {
+            PantallaPerfil(
+                navController = navController
+            )
+        }
+
+        // ================ NUEVA RUTA: ELIMINACIÓN DE CUENTA ================
+        composable("eliminar_cuenta") {
+            PantallaEliminarCuentaSimple(
+                navController = navController
+            )
+        }
+        // ================ FIN NUEVA RUTA ================
+
+        composable("crear_reporte") {
+            PantallaCrearReporte(
+                navController = navController,
+                onReporteCreado = {
+                    navController.popBackStack()
+                },
+                onNavegarAtras = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "editar_reporte/{reporteId}",
+            arguments = listOf(navArgument("reporteId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val reporteId = backStackEntry.arguments?.getString("reporteId") ?: ""
+            val viewModelEditarReporte: ViewModelEditarReporte = hiltViewModel()
+
+            PantallaEditarReporte(
+                reporteId = reporteId,
+                onNavegarAtras = { navController.popBackStack() },
+                onEdicionCompletada = {
+                    navController.popBackStack()
+                },
+                viewModel = viewModelEditarReporte
+            )
+        }
+
+        composable("mapa") {
+            PantallaMapa(
+                onNavegarAtras = { navController.popBackStack() },
+                onNavegarADetalleReporte = { reporteId ->
+                    navController.navigate("detalle_reporte/$reporteId")
+                }
+            )
+        }
+
+        composable("mis_reportes") {
+            val viewModelMisReportes: ViewModelMisReportes = hiltViewModel()
+            PantallaMisReportes(
+                onNavegarAtras = { navController.popBackStack() },
+                onNavegarACrearReporte = { navController.navigate("crear_reporte") },
+                onNavegarADetalleReporte = { reporteId ->
+                    navController.navigate("detalle_reporte/$reporteId")
+                },
+                onNavegarAEditarReporte = { reporteId ->
+                    navController.navigate("editar_reporte/$reporteId")
+                },
+                viewModel = viewModelMisReportes
+            )
+        }
+
+        composable("reportes_comunidad") {
+            val viewModelReportes: ViewModelReportes = hiltViewModel()
+            PantallaListaReportes(
+                onNavegarACrearReporte = { navController.navigate("crear_reporte") },
+                onNavegarADetalleReporte = { reporteId ->
+                    navController.navigate("detalle_reporte/$reporteId")
+                },
+                onNavegarAEditarReporte = { reporteId ->
+                    navController.navigate("editar_reporte/$reporteId")
+                },
+                onNavegarAtras = { navController.popBackStack() },
+                viewModel = viewModelReportes
+            )
+        }
+
+        composable(
+            route = "detalle_reporte/{reporteId}",
+            arguments = listOf(navArgument("reporteId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val reporteId = backStackEntry.arguments?.getString("reporteId") ?: ""
+            PantallaDetalleReporte(
+                reporteId = reporteId,
+                onNavegarAtras = { navController.popBackStack() },
+                onNavegarAEditarReporte = { reporteIdEditar ->
+                    navController.navigate("editar_reporte/$reporteIdEditar")
+                }
+            )
+        }
+
+        composable("seleccion_ubicacion") {
+            PantallaSeleccionUbicacionCompleta(
+                navController = navController,
+                onUbicacionSeleccionada = { ubicacion ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set(
+                        "ubicacion_seleccionada",
+                        ubicacion
+                    )
+                    navController.popBackStack()
+                },
+                onCancelar = { navController.popBackStack() }
+            )
+        }
+
+        composable("input_coordenadas") {
+            PantallaInputCoordenadas(
+                onCoordenadasConfirmadas = { coordenadas ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set(
+                        "ubicacion_seleccionada",
+                        coordenadas
+                    )
+                    navController.popBackStack()
+                },
+                onCancelar = { navController.popBackStack() }
+            )
+        }
+
+        composable("panel_administrador") {
+            PantallaPanelAdministrador(
+                onNavegarAValidacion = { navController.navigate("validacion_reportes") },
+                onNavegarAGestionUsuarios = { navController.navigate("gestion_usuarios") },
+                onNavegarAReportesAprobados = { navController.navigate("reportes_aprobados") },
+                onNavegarAEstadisticas = { navController.navigate("estadisticas") },
+                onNavegarAPerfil = { navController.navigate("perfil_administrador") },
+                onCerrarSesion = {
+                    viewModelAutenticacion.cerrarSesion()
+                    navController.navigate("visitante") { popUpTo(0) }
+                }
+            )
+        }
+
+        composable("perfil_administrador") {
+            PantallaPerfilAdministrador(
+                onVolver = { navController.popBackStack() }
+            )
+        }
+
+        composable("validacion_reportes") {
+            PantallaValidacionReportes(
+                onNavegarAtras = { navController.popBackStack() },
+                onNavegarADetalleReporte = { reporteId ->
+                    navController.navigate("detalle_reporte/$reporteId")
+                }
+            )
+        }
+
+        composable("gestion_usuarios") {
+            PantallaGestionUsuarios(
+                onNavegarAtras = { navController.popBackStack() }
+            )
+        }
+
+        composable("reportes_aprobados") {
+            PantallaReportesAprobados(
+                onNavegarAtras = { navController.popBackStack() },
+                onNavegarADetalleReporte = { reporteId ->
+                    navController.navigate("detalle_reporte/$reporteId")
+                }
+            )
+        }
+
+        composable("estadisticas") {
+            PantallaEstadisticas(
+                onNavegarAtras = { navController.popBackStack() }
+            )
+        }
+    }
+}
+```
+# Rutas
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.navegacion
+
+
+/**
+ * Objeto que define todas las rutas de navegación de la aplicación
+ * Proporciona un punto centralizado para gestionar las rutas y sus parámetros
+ */
+
+/**
+ * Clase sellada que representa una ruta con sus parámetros
+ * Permite un manejo type-safe de las rutas de navegación
+ */
+sealed class Rutas(val ruta: String) {
+    object Bienvenida : Rutas("bienvenida")
+    object InicioSesion : Rutas("inicio_sesion")
+    object Registro : Rutas("registro")
+    object ListaReportes : Rutas("lista_reportes")
+    object CrearReporte : Rutas("crear_reporte")
+    object DetalleReporte : Rutas("detalle_reporte")
+    object Mapa : Rutas("mapa")
+
+    // Rutas de administrador
+    object PanelAdministrador : Rutas("panel_administrador")
+    object ValidacionReportes : Rutas("validacion_reportes")
+    object GestionUsuarios : Rutas("gestion_usuarios")
+    object ReportesAprobados : Rutas("reportes_aprobados")
+
+    // Rutas de visitante
+    object Visitante : Rutas("visitante")
+
+    fun conArgumentos(vararg argumentos: String): String {
+        return buildString {
+            append(ruta)
+            argumentos.forEach { arg ->
+                append("/$arg")
+            }
+        }
+    }
+
+}
+```
+# ViewModel
+# Editar Reportes
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import javax.inject.Inject
+import android.util.Log
+
+/**
+ * ViewModel para la pantalla de edición de reportes
+ * Maneja la lógica de negocio para editar un reporte existente
+ *
+ * @property casoUsoReportes Caso de uso para operaciones de reportes
+ * @property savedStateHandle Handle para guardar y restaurar estado
+ */
+@HiltViewModel
+
+
+class ViewModelEditarReporte @Inject constructor(
+    private val repositorioReportes: RepositorioReportes
+) : ViewModel() {
+
+    private val _reporte = MutableStateFlow<Reporte?>(null)
+    val reporte: StateFlow<Reporte?> = _reporte.asStateFlow()
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _edicionExitosa = MutableStateFlow(false)
+    val edicionExitosa: StateFlow<Boolean> = _edicionExitosa.asStateFlow()
+
+    companion object {
+        private const val TAG = "ViewModelEditarReporte"
+    }
+
+    /**
+     * Carga los datos del reporte a editar
+     */
+    fun cargarReporte(reporteId: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _error.value = null
+
+            try {
+                val reporte = repositorioReportes.obtenerReportePorId(reporteId)
+                if (reporte != null) {
+                    _reporte.value = reporte
+                    Log.d(TAG, "✅ Reporte cargado: ${reporte.titulo}")
+                } else {
+                    _error.value = "No se encontró el reporte"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al cargar reporte: ${e.message}"
+                Log.e(TAG, "❌ ERROR cargando reporte: ${e.message}")
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun editarReporte(
+        reporteId: String,
+        titulo: String,
+        descripcion: String,
+        tipo: TipoReporte,
+        gravedad: String,
+        latitud: Double,
+        longitud: Double
+    ) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _error.value = null
+
+            try {
+                val resultado = repositorioReportes.editarReporte(
+                    reporteId = reporteId,
+                    titulo = titulo,
+                    descripcion = descripcion,
+                    tipo = tipo,
+                    gravedad = gravedad,
+                    latitud = latitud,
+                    longitud = longitud
+                )
+
+                if (resultado.isSuccess) {
+                    _edicionExitosa.value = true
+                    Log.d(TAG, "✅ Reporte editado exitosamente")
+                } else {
+                    _error.value = "Error al editar reporte: ${resultado.exceptionOrNull()?.message}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al editar reporte: ${e.message}"
+                Log.e(TAG, "❌ ERROR editando reporte: ${e.message}")
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun limpiarError() {
+        _error.value = null
+    }
+
+    fun reiniciarEstado() {
+        _edicionExitosa.value = false
+        _error.value = null
+    }
+}
+```
+# EstadosUi.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+/*
+sealed class EstadoUIEstadisticas {
+    object Cargando : EstadoUIEstadisticas()
+    object Exito : EstadoUIEstadisticas()
+    object Exportando : EstadoUIEstadisticas()
+    data class ExitoExportacion(val mensaje: String) : EstadoUIEstadisticas()
+    data class Error(val mensaje: String) : EstadoUIEstadisticas()
+}
+*/
+```
+# MisReportes.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioAutenticacion
+import javax.inject.Inject
+import android.util.Log
+/**
+ * ViewModel para la pantalla "Mis Reportes"
+ * Maneja la lógica de negocio para los reportes del usuario actual
+ *
+ * @property casoUsoReportes Caso de uso para operaciones de reportes
+ */
+@HiltViewModel
+class ViewModelMisReportes @Inject constructor(
+    private val repositorioReportes: RepositorioReportes,
+    private val repositorioAutenticacion: RepositorioAutenticacion
+) : ViewModel() {
+
+    private val _misReportes = MutableStateFlow<List<Reporte>>(emptyList())
+    val misReportes: StateFlow<List<Reporte>> = _misReportes.asStateFlow()
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    companion object {
+        private const val TAG = "ViewModelMisReportes"
+    }
+
+    init {
+        Log.d(TAG, "ViewModelMisReportes INICIALIZADO")
+        cargarMisReportes()
+    }
+    /**
+     * Cambia el filtro de estado de los reportes
+     * @param nuevoFiltro Nuevo filtro a aplicar
+     */
+    fun cargarMisReportes() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _error.value = null
+
+            try {
+                val usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+                if (usuarioActual == null) {
+                    _error.value = "Usuario no autenticado"
+                    _misReportes.value = emptyList()
+                    return@launch
+                }
+
+                val reportes = repositorioReportes.obtenerReportesPorUsuario(usuarioActual.id)
+                _misReportes.value = reportes
+
+            } catch (e: Exception) {
+                _error.value = "Error al cargar reportes: ${e.message}"
+                _misReportes.value = emptyList()
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Elimina un reporte específico
+     * @param reportId ID del reporte a eliminar
+     */
+    fun obtenerUsuarioActualId(): String {
+        val usuarioId = repositorioAutenticacion.obtenerUsuarioActual()?.id ?: ""
+        return usuarioId
+    }
+    /**
+     * Actualiza el estado de un reporte
+     * @param reportId ID del reporte
+     * @param nuevoEstado Nuevo estado
+     */
+    fun alternarMeGusta(reporteId: String) {
+        viewModelScope.launch {
+            try {
+                repositorioReportes.alternarMeGusta(reporteId)
+                cargarMisReportes()
+            } catch (e: Exception) {
+                _error.value = "Error al dar like: ${e.message}"
+            }
+        }
+    }
+    /**
+     * Obtiene estadísticas de los reportes del usuario
+     * @return Estadísticas de reportes
+     */
+
+    fun eliminarReporte(reporteId: String) {
+        viewModelScope.launch {
+            try {
+                repositorioReportes.eliminarReporte(reporteId)
+                cargarMisReportes()
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar reporte: ${e.message}"
+            }
+        }
+    }
+
+    fun limpiarError() {
+        _error.value = null
+    }
+
+    fun recargarReportes() {
+        cargarMisReportes()
+    }
+}
+```
+# ViewModelAdminitrativo
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioUsuarios
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioAutenticacion
+import mx.edu.utng.mrs.mycomunidad.servicios.ServicioNotificacionesFirestore
+import android.util.Log
+import javax.inject.Inject
+
+/**
+ * ViewModel para funcionalidades de administrador
+ * Maneja la lógica de negocio para el panel de administración y validación de reportes
+ *
+ * @property casoUsoAdministrador Caso de uso para operaciones de administración
+ * @property casoUsoReportes Caso de uso para operaciones de reportes
+ */
+@HiltViewModel
+class ViewModelAdministrador @Inject constructor(
+    private val repositorioReportes: RepositorioReportes,
+    private val repositorioUsuarios: RepositorioUsuarios,
+    private val repositorioAutenticacion: RepositorioAutenticacion,
+    private val servicioNotificaciones: ServicioNotificacionesFirestore
+) : ViewModel() {
+
+    private val _reportesPendientes = MutableStateFlow<List<Reporte>>(emptyList())
+    val reportesPendientes: StateFlow<List<Reporte>> = _reportesPendientes.asStateFlow()
+
+    private val _usuarios = MutableStateFlow<List<Usuario>>(emptyList())
+    val usuarios: StateFlow<List<Usuario>> = _usuarios.asStateFlow()
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando.asStateFlow()
+
+    private val _mensajeError = MutableStateFlow<String?>(null)
+    val mensajeError: StateFlow<String?> = _mensajeError.asStateFlow()
+
+    private val _totalUsuarios = MutableStateFlow(0)
+    val totalUsuarios: StateFlow<Int> = _totalUsuarios.asStateFlow()
+
+    private val _reportesResueltos = MutableStateFlow(0)
+    val reportesResueltos: StateFlow<Int> = _reportesResueltos.asStateFlow()
+
+    private val _reportesUrgentes = MutableStateFlow(0)
+    val reportesUrgentes: StateFlow<Int> = _reportesUrgentes.asStateFlow()
+
+    private val _conteoPorPrioridad = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val conteoPorPrioridad: StateFlow<Map<String, Int>> = _conteoPorPrioridad.asStateFlow()
+
+    private val _reportesAprobados = MutableStateFlow<List<Reporte>>(emptyList())
+    val reportesAprobados: StateFlow<List<Reporte>> = _reportesAprobados.asStateFlow()
+
+    private val _usuarioAdministrador = MutableStateFlow<Usuario?>(null)
+    val usuarioAdministrador: StateFlow<Usuario?> = _usuarioAdministrador.asStateFlow()
+
+    private val _mensajeExito = MutableStateFlow<String?>(null)
+    val mensajeExito: StateFlow<String?> = _mensajeExito.asStateFlow()
+
+    init {
+        Log.d("ViewModelAdministrador", "ViewModelAdministrador inicializado")
+        cargarDatosCompletos()
+    }
+    /**
+     * Carga las métricas del panel de administrador
+     */
+    fun cargarDatosCompletos() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                cargarYProcesarReportes()
+                cargarUsuarios()
+                cargarPerfilAdministrador()
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al cargar datos: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Carga los reportes pendientes de validación
+     */
+    fun cargarUsuarios() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                repositorioUsuarios.obtenerTodosLosUsuarios().collect { usuariosList ->
+                    _usuarios.value = usuariosList
+                    _totalUsuarios.value = usuariosList.size
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al cargar usuarios: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Aprueba un reporte pendiente de validación
+     * @param reportId ID del reporte a aprobar
+     */
+    fun eliminarUsuario(usuarioId: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val resultado = repositorioUsuarios.eliminarUsuario(usuarioId)
+                if (resultado.isSuccess) {
+                    cargarUsuarios()
+                    _mensajeExito.value = "Usuario eliminado correctamente"
+                } else {
+                    _mensajeError.value = "Error al eliminar usuario"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al eliminar usuario: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+    /**
+     * Rechaza un reporte pendiente de validación
+     * @param reportId ID del reporte a rechazar
+     * @param motivo Motivo del rechazo
+     */
+
+    fun actualizarPerfilAdministrador(nombre: String, email: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+                usuarioActual?.let { usuario ->
+                    val resultado = repositorioUsuarios.actualizarPerfilUsuario(usuario.id, nombre, email)
+                    if (resultado.isSuccess) {
+                        cargarPerfilAdministrador()
+                        _mensajeExito.value = "Perfil actualizado correctamente"
+                    } else {
+                        _mensajeError.value = "Error al actualizar perfil"
+                    }
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al actualizar perfil: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+    /**
+     * Solicita cambios en un reporte pendiente
+     * @param reportId ID del reporte
+     * @param comentarios Comentarios sobre los cambios requeridos
+     */
+    fun cargarPerfilAdministrador() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+                usuarioActual?.let { usuario ->
+                    val usuarioCompleto = repositorioUsuarios.obtenerUsuarioPorId(usuario.id)
+                    _usuarioAdministrador.value = usuarioCompleto
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al cargar perfil: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    private suspend fun cargarYProcesarReportes() {
+        try {
+            val todosLosReportes = repositorioReportes.obtenerTodosLosReportes()
+            _reportesPendientes.value = todosLosReportes.filter { it.estado == EstadoReporte.PENDIENTE }
+            _reportesResueltos.value = todosLosReportes.count { it.estado == EstadoReporte.APROBADO }
+            _reportesUrgentes.value = todosLosReportes.count { it.gravedad == "Urgente" }
+
+            val conteo = mutableMapOf<String, Int>()
+            listOf("Baja", "Media", "Alta", "Urgente").forEach { prioridad ->
+                conteo[prioridad] = todosLosReportes.count { it.gravedad == prioridad }
+            }
+            _conteoPorPrioridad.value = conteo
+            _reportesAprobados.value = todosLosReportes.filter { it.estado == EstadoReporte.APROBADO }
+        } catch (e: Exception) {
+            _mensajeError.value = "Error al cargar reportes: ${e.message}"
+        }
+    }
+
+    /**
+     * Obtiene estadísticas detalladas del sistema
+     * @param periodo Período de tiempo para las estadísticas
+     * @return Estadísticas del sistema
+     */
+    fun aprobarReporte(reporteId: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val reporte = obtenerReportePorId(reporteId)
+                if (reporte != null) {
+                    val resultado = repositorioReportes.actualizarEstadoReporte(reporte.id, EstadoReporte.APROBADO)
+                    if (resultado.isSuccess) {
+                        val notificacionEnviada = servicioNotificaciones.enviarNotificacionReporteAprobado(
+                            usuarioId = reporte.usuarioId,
+                            tituloReporte = reporte.titulo
+                        )
+                        _mensajeExito.value = if (notificacionEnviada) {
+                            "Reporte aprobado y notificación enviada"
+                        } else {
+                            "Reporte aprobado (error en notificación)"
+                        }
+                        cargarDatosCompletos()
+                    }
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al aprobar reporte: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Convierte un Reporte a ReportePendienteUi para la interfaz
+     * @param reporte Reporte a convertir
+     * @return ReportePendienteUi convertido
+     */
+
+    fun rechazarReporte(reporteId: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val reporte = obtenerReportePorId(reporteId)
+                if (reporte != null) {
+                    val resultado = repositorioReportes.actualizarEstadoReporte(reporte.id, EstadoReporte.RECHAZADO)
+                    if (resultado.isSuccess) {
+                        val notificacionEnviada = servicioNotificaciones.enviarNotificacionReporteRechazado(
+                            usuarioId = reporte.usuarioId,
+                            tituloReporte = reporte.titulo,
+                            motivo = "Reporte no cumple con los requisitos"
+                        )
+                        _mensajeExito.value = if (notificacionEnviada) {
+                            "Reporte rechazado y notificación enviada"
+                        } else {
+                            "Reporte rechazado (error en notificación)"
+                        }
+                        cargarDatosCompletos()
+                    }
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al rechazar reporte: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+    /**
+     * Obtiene el nombre de un usuario por su ID
+     * @param userId ID del usuario
+     * @return Nombre del usuario o "Usuario Desconocido"
+     */
+
+    fun cargarReportesPendientes() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val todosLosReportes = repositorioReportes.obtenerTodosLosReportes()
+                _reportesPendientes.value = todosLosReportes.filter { it.estado == EstadoReporte.PENDIENTE }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al cargar reportes pendientes: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Estado para métricas del administrador
+     */
+    fun buscarUsuarios(query: String) {
+        viewModelScope.launch {
+            try {
+                val usuariosFiltrados = if (query.isBlank()) {
+                    _usuarios.value
+                } else {
+                    _usuarios.value.filter {
+                        it.nombre.contains(query, ignoreCase = true) ||
+                                it.email.contains(query, ignoreCase = true)
+                    }
+                }
+                _usuarios.value = usuariosFiltrados
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al buscar usuarios: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Representación de reporte pendiente para la UI
+     */
+
+    fun actualizarRolUsuario(usuarioId: String, nuevoRol: RolUsuario) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val resultado = repositorioUsuarios.actualizarRolUsuario(usuarioId, nuevoRol)
+                if (resultado.isSuccess) {
+                    cargarUsuarios()
+                    _mensajeExito.value = "Rol actualizado correctamente"
+                } else {
+                    _mensajeError.value = "Error al actualizar rol"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al actualizar rol: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+
+    /**
+     * Estadísticas del sistema
+     */
+    fun obtenerReportePorId(reporteId: String): Reporte? {
+        return _reportesPendientes.value.find { it.id == reporteId }
+            ?: _reportesAprobados.value.find { it.id == reporteId }
+    }
+
+    fun limpiarError() {
+        _mensajeError.value = null
+    }
+
+    fun limpiarMensajeExito() {
+        _mensajeExito.value = null
+    }
+    fun probarNotificacionSegura() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                // Obtener el usuario actual (administrador)
+                val usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+
+                if (usuarioActual != null) {
+                    // Enviar notificación de prueba al propio administrador
+                    val notificacionEnviada = servicioNotificaciones.enviarNotificacionReporteAprobado(
+                        usuarioId = usuarioActual.id,
+                        tituloReporte = "Notificación de prueba"
+                    )
+
+                    if (notificacionEnviada) {
+                        _mensajeExito.value = "✅ Notificación de prueba enviada correctamente"
+                    } else {
+                        _mensajeError.value = "❌ Error al enviar notificación de prueba"
+                    }
+                } else {
+                    _mensajeError.value = "❌ No se pudo obtener el usuario actual"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "❌ Error al probar notificación: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+}
+```
+# viewModelAdminitrador.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioUsuarios
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioAutenticacion
+import mx.edu.utng.mrs.mycomunidad.servicios.ServicioNotificacionesFirestore
+import android.util.Log
+import javax.inject.Inject
+
+/**
+ * ViewModel para funcionalidades de administrador
+ * Maneja la lógica de negocio para el panel de administración y validación de reportes
+ *
+ * @property casoUsoAdministrador Caso de uso para operaciones de administración
+ * @property casoUsoReportes Caso de uso para operaciones de reportes
+ */
+@HiltViewModel
+class ViewModelAdministrador @Inject constructor(
+    private val repositorioReportes: RepositorioReportes,
+    private val repositorioUsuarios: RepositorioUsuarios,
+    private val repositorioAutenticacion: RepositorioAutenticacion,
+    private val servicioNotificaciones: ServicioNotificacionesFirestore
+) : ViewModel() {
+
+    private val _reportesPendientes = MutableStateFlow<List<Reporte>>(emptyList())
+    val reportesPendientes: StateFlow<List<Reporte>> = _reportesPendientes.asStateFlow()
+
+    private val _usuarios = MutableStateFlow<List<Usuario>>(emptyList())
+    val usuarios: StateFlow<List<Usuario>> = _usuarios.asStateFlow()
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando.asStateFlow()
+
+    private val _mensajeError = MutableStateFlow<String?>(null)
+    val mensajeError: StateFlow<String?> = _mensajeError.asStateFlow()
+
+    private val _totalUsuarios = MutableStateFlow(0)
+    val totalUsuarios: StateFlow<Int> = _totalUsuarios.asStateFlow()
+
+    private val _reportesResueltos = MutableStateFlow(0)
+    val reportesResueltos: StateFlow<Int> = _reportesResueltos.asStateFlow()
+
+    private val _reportesUrgentes = MutableStateFlow(0)
+    val reportesUrgentes: StateFlow<Int> = _reportesUrgentes.asStateFlow()
+
+    private val _conteoPorPrioridad = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val conteoPorPrioridad: StateFlow<Map<String, Int>> = _conteoPorPrioridad.asStateFlow()
+
+    private val _reportesAprobados = MutableStateFlow<List<Reporte>>(emptyList())
+    val reportesAprobados: StateFlow<List<Reporte>> = _reportesAprobados.asStateFlow()
+
+    private val _usuarioAdministrador = MutableStateFlow<Usuario?>(null)
+    val usuarioAdministrador: StateFlow<Usuario?> = _usuarioAdministrador.asStateFlow()
+
+    private val _mensajeExito = MutableStateFlow<String?>(null)
+    val mensajeExito: StateFlow<String?> = _mensajeExito.asStateFlow()
+
+    init {
+        Log.d("ViewModelAdministrador", "ViewModelAdministrador inicializado")
+        cargarDatosCompletos()
+    }
+    /**
+     * Carga las métricas del panel de administrador
+     */
+    fun cargarDatosCompletos() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                cargarYProcesarReportes()
+                cargarUsuarios()
+                cargarPerfilAdministrador()
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al cargar datos: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Carga los reportes pendientes de validación
+     */
+    fun cargarUsuarios() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                repositorioUsuarios.obtenerTodosLosUsuarios().collect { usuariosList ->
+                    _usuarios.value = usuariosList
+                    _totalUsuarios.value = usuariosList.size
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al cargar usuarios: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Aprueba un reporte pendiente de validación
+     * @param reportId ID del reporte a aprobar
+     */
+    fun eliminarUsuario(usuarioId: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val resultado = repositorioUsuarios.eliminarUsuario(usuarioId)
+                if (resultado.isSuccess) {
+                    cargarUsuarios()
+                    _mensajeExito.value = "Usuario eliminado correctamente"
+                } else {
+                    _mensajeError.value = "Error al eliminar usuario"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al eliminar usuario: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+    /**
+     * Rechaza un reporte pendiente de validación
+     * @param reportId ID del reporte a rechazar
+     * @param motivo Motivo del rechazo
+     */
+
+    fun actualizarPerfilAdministrador(nombre: String, email: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+                usuarioActual?.let { usuario ->
+                    val resultado = repositorioUsuarios.actualizarPerfilUsuario(usuario.id, nombre, email)
+                    if (resultado.isSuccess) {
+                        cargarPerfilAdministrador()
+                        _mensajeExito.value = "Perfil actualizado correctamente"
+                    } else {
+                        _mensajeError.value = "Error al actualizar perfil"
+                    }
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al actualizar perfil: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+    /**
+     * Solicita cambios en un reporte pendiente
+     * @param reportId ID del reporte
+     * @param comentarios Comentarios sobre los cambios requeridos
+     */
+    fun cargarPerfilAdministrador() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+                usuarioActual?.let { usuario ->
+                    val usuarioCompleto = repositorioUsuarios.obtenerUsuarioPorId(usuario.id)
+                    _usuarioAdministrador.value = usuarioCompleto
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al cargar perfil: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    private suspend fun cargarYProcesarReportes() {
+        try {
+            val todosLosReportes = repositorioReportes.obtenerTodosLosReportes()
+            _reportesPendientes.value = todosLosReportes.filter { it.estado == EstadoReporte.PENDIENTE }
+            _reportesResueltos.value = todosLosReportes.count { it.estado == EstadoReporte.APROBADO }
+            _reportesUrgentes.value = todosLosReportes.count { it.gravedad == "Urgente" }
+
+            val conteo = mutableMapOf<String, Int>()
+            listOf("Baja", "Media", "Alta", "Urgente").forEach { prioridad ->
+                conteo[prioridad] = todosLosReportes.count { it.gravedad == prioridad }
+            }
+            _conteoPorPrioridad.value = conteo
+            _reportesAprobados.value = todosLosReportes.filter { it.estado == EstadoReporte.APROBADO }
+        } catch (e: Exception) {
+            _mensajeError.value = "Error al cargar reportes: ${e.message}"
+        }
+    }
+
+    /**
+     * Obtiene estadísticas detalladas del sistema
+     * @param periodo Período de tiempo para las estadísticas
+     * @return Estadísticas del sistema
+     */
+    fun aprobarReporte(reporteId: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val reporte = obtenerReportePorId(reporteId)
+                if (reporte != null) {
+                    val resultado = repositorioReportes.actualizarEstadoReporte(reporte.id, EstadoReporte.APROBADO)
+                    if (resultado.isSuccess) {
+                        val notificacionEnviada = servicioNotificaciones.enviarNotificacionReporteAprobado(
+                            usuarioId = reporte.usuarioId,
+                            tituloReporte = reporte.titulo
+                        )
+                        _mensajeExito.value = if (notificacionEnviada) {
+                            "Reporte aprobado y notificación enviada"
+                        } else {
+                            "Reporte aprobado (error en notificación)"
+                        }
+                        cargarDatosCompletos()
+                    }
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al aprobar reporte: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Convierte un Reporte a ReportePendienteUi para la interfaz
+     * @param reporte Reporte a convertir
+     * @return ReportePendienteUi convertido
+     */
+
+    fun rechazarReporte(reporteId: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val reporte = obtenerReportePorId(reporteId)
+                if (reporte != null) {
+                    val resultado = repositorioReportes.actualizarEstadoReporte(reporte.id, EstadoReporte.RECHAZADO)
+                    if (resultado.isSuccess) {
+                        val notificacionEnviada = servicioNotificaciones.enviarNotificacionReporteRechazado(
+                            usuarioId = reporte.usuarioId,
+                            tituloReporte = reporte.titulo,
+                            motivo = "Reporte no cumple con los requisitos"
+                        )
+                        _mensajeExito.value = if (notificacionEnviada) {
+                            "Reporte rechazado y notificación enviada"
+                        } else {
+                            "Reporte rechazado (error en notificación)"
+                        }
+                        cargarDatosCompletos()
+                    }
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al rechazar reporte: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+    /**
+     * Obtiene el nombre de un usuario por su ID
+     * @param userId ID del usuario
+     * @return Nombre del usuario o "Usuario Desconocido"
+     */
+
+    fun cargarReportesPendientes() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val todosLosReportes = repositorioReportes.obtenerTodosLosReportes()
+                _reportesPendientes.value = todosLosReportes.filter { it.estado == EstadoReporte.PENDIENTE }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al cargar reportes pendientes: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Estado para métricas del administrador
+     */
+    fun buscarUsuarios(query: String) {
+        viewModelScope.launch {
+            try {
+                val usuariosFiltrados = if (query.isBlank()) {
+                    _usuarios.value
+                } else {
+                    _usuarios.value.filter {
+                        it.nombre.contains(query, ignoreCase = true) ||
+                                it.email.contains(query, ignoreCase = true)
+                    }
+                }
+                _usuarios.value = usuariosFiltrados
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al buscar usuarios: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Representación de reporte pendiente para la UI
+     */
+
+    fun actualizarRolUsuario(usuarioId: String, nuevoRol: RolUsuario) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val resultado = repositorioUsuarios.actualizarRolUsuario(usuarioId, nuevoRol)
+                if (resultado.isSuccess) {
+                    cargarUsuarios()
+                    _mensajeExito.value = "Rol actualizado correctamente"
+                } else {
+                    _mensajeError.value = "Error al actualizar rol"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al actualizar rol: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+
+    /**
+     * Estadísticas del sistema
+     */
+    fun obtenerReportePorId(reporteId: String): Reporte? {
+        return _reportesPendientes.value.find { it.id == reporteId }
+            ?: _reportesAprobados.value.find { it.id == reporteId }
+    }
+
+    fun limpiarError() {
+        _mensajeError.value = null
+    }
+
+    fun limpiarMensajeExito() {
+        _mensajeExito.value = null
+    }
+    fun probarNotificacionSegura() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                // Obtener el usuario actual (administrador)
+                val usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+
+                if (usuarioActual != null) {
+                    // Enviar notificación de prueba al propio administrador
+                    val notificacionEnviada = servicioNotificaciones.enviarNotificacionReporteAprobado(
+                        usuarioId = usuarioActual.id,
+                        tituloReporte = "Notificación de prueba"
+                    )
+
+                    if (notificacionEnviada) {
+                        _mensajeExito.value = "✅ Notificación de prueba enviada correctamente"
+                    } else {
+                        _mensajeError.value = "❌ Error al enviar notificación de prueba"
+                    }
+                } else {
+                    _mensajeError.value = "❌ No se pudo obtener el usuario actual"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "❌ Error al probar notificación: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+}
+```
+# viewModelAutenticacion.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioAutenticacion
+import mx.edu.utng.mrs.mycomunidad.utilidades.AlmacenamientoSeguro
+import javax.inject.Inject
+/**
+ * ViewModel para manejar la autenticación de usuarios
+ * Gestiona login, registro, recuperación de contraseña y estado de sesión
+ *
+ * @property casoUsoAutenticacion Caso de uso para operaciones de autenticación
+ */
+@HiltViewModel
+class ViewModelAutenticacion @Inject constructor(
+    private val repositorioAutenticacion: RepositorioAutenticacion,
+    private val almacenamientoSeguro: AlmacenamientoSeguro
+) : ViewModel() {
+
+    private val _estadoUI = MutableStateFlow<EstadoAutenticacion>(EstadoAutenticacion.Inactivo)
+    val estadoUI: StateFlow<EstadoAutenticacion> = _estadoUI.asStateFlow()
+
+    private val _usuarioActual = MutableStateFlow<Usuario?>(null)
+    val usuarioActual: StateFlow<Usuario?> = _usuarioActual.asStateFlow()
+
+    private val _haySesionActiva = MutableStateFlow(almacenamientoSeguro.haySesionActiva())
+    val haySesionActiva: StateFlow<Boolean> = _haySesionActiva.asStateFlow()
+
+    init {
+        cargarUsuarioActual()
+    }
+
+    /**
+     * Verifica si hay un usuario autenticado
+     */
+    fun registrarUsuario(nombre: String, email: String, contrasena: String) {
+        viewModelScope.launch {
+            _estadoUI.value = EstadoAutenticacion.Cargando
+            try {
+                val resultado = repositorioAutenticacion.registrarUsuario(nombre, email, contrasena)
+                if (resultado.isSuccess) {
+                    val usuario = resultado.getOrThrow()
+                    almacenamientoSeguro.guardarSesionUsuario(usuario)
+                    _usuarioActual.value = usuario
+                    _haySesionActiva.value = true
+                    _estadoUI.value = EstadoAutenticacion.Exito(usuario)
+                } else {
+                    _estadoUI.value = EstadoAutenticacion.Error(
+                        resultado.exceptionOrNull()?.message ?: "Error desconocido en el registro"
+                    )
+                }
+            } catch (e: Exception) {
+                _estadoUI.value = EstadoAutenticacion.Error(
+                    e.message ?: "Error al registrar usuario"
+                )
+            }
+        }
+    }
+    /**
+     * Inicia sesión con email y contraseña
+     * @param email Correo electrónico del usuario
+     * @param password Contraseña del usuario
+     */
+    fun iniciarSesion(email: String, contrasena: String) {
+        viewModelScope.launch {
+            _estadoUI.value = EstadoAutenticacion.Cargando
+            try {
+                val resultado = repositorioAutenticacion.iniciarSesion(email, contrasena)
+                if (resultado.isSuccess) {
+                    val usuario = resultado.getOrThrow()
+                    almacenamientoSeguro.guardarSesionUsuario(usuario)
+                    _usuarioActual.value = usuario
+                    _haySesionActiva.value = true
+                    _estadoUI.value = EstadoAutenticacion.Exito(usuario)
+                } else {
+                    _estadoUI.value = EstadoAutenticacion.Error(
+                        resultado.exceptionOrNull()?.message ?: "Error desconocido"
+                    )
+                }
+            } catch (e: Exception) {
+                _estadoUI.value = EstadoAutenticacion.Error(e.message ?: "Error al iniciar sesión")
+            }
+        }
+    }
+
+    fun cerrarSesion() {
+        viewModelScope.launch {
+            _estadoUI.value = EstadoAutenticacion.Cargando
+            try {
+                repositorioAutenticacion.cerrarSesion()
+                almacenamientoSeguro.limpiarSesion()
+                _usuarioActual.value = null
+                _haySesionActiva.value = false
+                _estadoUI.value = EstadoAutenticacion.Inactivo
+            } catch (e: Exception) {
+                _estadoUI.value = EstadoAutenticacion.Error("Error al cerrar sesión")
+            }
+        }
+    }
+    /**
+     * Registra un nuevo usuario
+     * @param nombre Nombre completo del usuario
+     * @param email Correo electrónico
+     * @param password Contraseña
+     * @param confirmPassword Confirmación de contraseña
+     */
+     fun cargarUsuarioActual() {
+        viewModelScope.launch {
+            val usuarioAlmacenado = almacenamientoSeguro.obtenerUsuarioActual()
+            if (usuarioAlmacenado != null) {
+                _usuarioActual.value = usuarioAlmacenado
+                _haySesionActiva.value = true
+            } else {
+                val usuarioFirebase = repositorioAutenticacion.obtenerUsuarioActual()
+                if (usuarioFirebase != null) {
+                    almacenamientoSeguro.guardarSesionUsuario(usuarioFirebase)
+                    _usuarioActual.value = usuarioFirebase
+                    _haySesionActiva.value = true
+                }
+            }
+        }
+    }
+}
+
+sealed class EstadoAutenticacion {
+    object Inactivo : EstadoAutenticacion()
+    object Cargando : EstadoAutenticacion()
+    data class Exito(val usuario: Usuario) : EstadoAutenticacion()
+    data class Error(val mensaje: String) : EstadoAutenticacion()
+}
+```
+# ViewModelComentario.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Comentario
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioComentarios
+import javax.inject.Inject
+/**
+ * ViewModel para manejar comentarios en reportes y otros elementos
+ * Gestiona la carga, creación, edición y eliminación de comentarios
+ *
+ * @property casoUsoComentarios Caso de uso para operaciones de comentarios
+ * @property savedStateHandle Handle para guardar y restaurar estado
+ */
+@HiltViewModel
+class ViewModelComentarios @Inject constructor(
+    private val repositorioComentarios: RepositorioComentarios
+) : ViewModel() {
+    /**
+     * Agrega un nuevo comentario
+     * @param contenido Contenido del comentario
+     */
+    private val _comentarios = MutableStateFlow<List<Comentario>>(emptyList())
+    val comentarios: StateFlow<List<Comentario>> = _comentarios
+
+    private val _estadoUI = MutableStateFlow<EstadoUI>(EstadoUI.Inicial)
+    val estadoUI: StateFlow<EstadoUI> = _estadoUI
+
+    private val _mensajeError = MutableStateFlow<String?>(null)
+    val mensajeError: StateFlow<String?> = _mensajeError
+
+    fun cargarComentarios(reporteId: String) {
+        viewModelScope.launch {
+            _estadoUI.value = EstadoUI.Cargando
+            try {
+                repositorioComentarios.obtenerComentariosPorReporte(reporteId).collect { listaComentarios ->
+                    _comentarios.value = listaComentarios
+                    _estadoUI.value = EstadoUI.Exito
+                    _mensajeError.value = null
+                }
+            } catch (e: Exception) {
+                _estadoUI.value = EstadoUI.Error
+                _mensajeError.value = "Error al cargar comentarios: ${e.message}"
+            }
+        }
+    }
+    fun agregarComentario(reporteId: String, texto: String) {
+        if (texto.isBlank()) {
+            _mensajeError.value = "El comentario no puede estar vacío"
+            return
+        }
+
+        viewModelScope.launch {
+            _estadoUI.value = EstadoUI.Cargando
+            try {
+                val resultado = repositorioComentarios.agregarComentario(reporteId, texto)
+                if (resultado.isSuccess) {
+                    _mensajeError.value = null
+                    // Los comentarios se actualizarán automáticamente por el flow
+                } else {
+                    _mensajeError.value = resultado.exceptionOrNull()?.message ?: "Error al agregar comentario"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al agregar comentario: ${e.message}"
+            } finally {
+                _estadoUI.value = EstadoUI.Exito
+            }
+        }
+    }
+    /**
+     * Elimina un comentario
+     * @param comentarioId ID del comentario a eliminar
+     */
+    fun eliminarComentario(
+        reporteId: String,
+        comentarioId: String,
+        usuarioId: String,
+        esAdmin: Boolean = false  // ✅ NUEVO PARÁMETRO PARA ADMIN
+    ) {
+        viewModelScope.launch {
+            _estadoUI.value = EstadoUI.Cargando
+            try {
+                val resultado = repositorioComentarios.eliminarComentario(
+                    reporteId,
+                    comentarioId,
+                    usuarioId,
+                    esAdmin  // ✅ PASAR PARÁMETRO AL REPOSITORIO
+                )
+                if (resultado.isSuccess) {
+                    _mensajeError.value = null
+                } else {
+                    _mensajeError.value = resultado.exceptionOrNull()?.message ?: "Error al eliminar comentario"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al eliminar comentario: ${e.message}"
+            } finally {
+                _estadoUI.value = EstadoUI.Exito
+            }
+        }
+    }
+    /**
+     * Edita un comentario existente
+     * @param comentarioId ID del comentario a editar
+     * @param nuevoContenido Nuevo contenido del comentario
+     */
+    fun editarComentario(reporteId: String, comentarioId: String, nuevoTexto: String, usuarioId: String) {
+        if (nuevoTexto.isBlank()) {
+            _mensajeError.value = "El comentario no puede estar vacío"
+            return
+        }
+
+        viewModelScope.launch {
+            _estadoUI.value = EstadoUI.Cargando
+            try {
+                val resultado = repositorioComentarios.editarComentario(reporteId, comentarioId, nuevoTexto, usuarioId)
+                if (resultado.isSuccess) {
+                    _mensajeError.value = null
+                } else {
+                    _mensajeError.value = resultado.exceptionOrNull()?.message ?: "Error al editar comentario"
+                }
+            } catch (e: Exception) {
+                _mensajeError.value = "Error al editar comentario: ${e.message}"
+            } finally {
+                _estadoUI.value = EstadoUI.Exito
+            }
+        }
+    }
+    fun limpiarError() {
+        _mensajeError.value = null
+    }
+
+    sealed class EstadoUI {
+        object Inicial : EstadoUI()
+        object Cargando : EstadoUI()
+        object Exito : EstadoUI()
+        object Error : EstadoUI()
+    }
+}
+```
+# viewModelCrearReporte
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import android.location.Location
+import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.android.gms.maps.model.LatLng
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.fuente_datos.ServicioFirebase
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import mx.edu.utng.mrs.mycomunidad.servicios.ServicioUbicacionManager
+import javax.inject.Inject
+/**
+ * ViewModel para la creación de nuevos reportes
+ * Maneja la lógica de negocio para crear reportes con validaciones
+ *
+ * @property casoUsoReportes Caso de uso para operaciones de reportes
+ */
+@HiltViewModel
+class ViewModelCrearReporte @Inject constructor(
+    private val repositorioReportes: RepositorioReportes,
+    private val servicioUbicacion: ServicioUbicacionManager,
+    private val servicioFirebase: ServicioFirebase
+) : ViewModel() {
+
+    var titulo by mutableStateOf("")
+        private set
+
+    var descripcion by mutableStateOf("")
+        private set
+
+    var tipoSeleccionado by mutableStateOf(TipoReporte.BACHE)
+        private set
+
+    var gravedadSeleccionada by mutableStateOf("Media")
+        private set
+
+    private val _imagenes = mutableStateListOf<Uri>()
+    val imagenes: List<Uri> get() = _imagenes
+
+    var mostrarError by mutableStateOf(false)
+    var mensajeError by mutableStateOf("")
+
+    private val _ubicacionActual = MutableStateFlow<Location?>(null)
+    val ubicacionActual: StateFlow<Location?> = _ubicacionActual
+
+    private val _estadoUI = MutableStateFlow<EstadoUI>(EstadoUI.Inicial)
+    val estadoUI: StateFlow<EstadoUI> = _estadoUI
+
+    private val _estaObteniendoUbicacion = MutableStateFlow(false)
+    val estaObteniendoUbicacion: StateFlow<Boolean> = _estaObteniendoUbicacion
+
+    private val _errorUbicacion = MutableStateFlow<String?>(null)
+    val errorUbicacion: StateFlow<String?> = _errorUbicacion
+
+    private val _mensajeExito = MutableStateFlow<String?>(null)
+    val mensajeExito: StateFlow<String?> = _mensajeExito
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando
+
+    fun actualizarTitulo(nuevoTitulo: String) {
+        titulo = nuevoTitulo
+        limpiarErrorSiEsNecesario()
+    }
+    /**
+     * Actualiza la descripción del reporte
+     * @param descripcion Nueva descripción
+     */
+    fun actualizarDescripcion(nuevaDescripcion: String) {
+        descripcion = nuevaDescripcion
+        limpiarErrorSiEsNecesario()
+    }
+    /**
+     * Actualiza la prioridad del reporte
+     * @param prioridad Nueva prioridad
+     */
+    fun actualizarTipo(nuevoTipo: TipoReporte) {
+        tipoSeleccionado = nuevoTipo
+    }
+
+    fun actualizarGravedad(nuevaGravedad: String) {
+        gravedadSeleccionada = nuevaGravedad
+    }
+    /**
+     * Actualiza la ubicación del reporte
+     * @param ubicacion Nueva ubicación
+     */
+    fun obtenerUbicacionActual() {
+        _estaObteniendoUbicacion.value = true
+        _errorUbicacion.value = null
+
+        viewModelScope.launch {
+            try {
+                servicioUbicacion.obtenerUbicacionActualUnaVez().collect { location ->
+                    _ubicacionActual.value = location
+                    _estaObteniendoUbicacion.value = false
+                    _errorUbicacion.value = null
+                }
+            } catch (e: Exception) {
+                _errorUbicacion.value = "Error al obtener ubicación: ${e.message}"
+                _estaObteniendoUbicacion.value = false
+            }
+        }
+    }
+
+    fun establecerUbicacionManual(latitud: Double, longitud: Double) {
+        val location = Location("manual")
+        location.latitude = latitud
+        location.longitude = longitud
+        _ubicacionActual.value = location
+        _errorUbicacion.value = null
+    }
+
+    fun establecerUbicacionDesdeMapa(latLng: LatLng) {
+        val location = Location("mapa")
+        location.latitude = latLng.latitude
+        location.longitude = latLng.longitude
+        _ubicacionActual.value = location
+        _errorUbicacion.value = null
+    }
+
+    fun obtenerUltimaUbicacionConocida() {
+        viewModelScope.launch {
+            servicioUbicacion.obtenerUltimaUbicacionConocida()?.let { location ->
+                _ubicacionActual.value = location
+                _errorUbicacion.value = null
+            }
+        }
+    }
+
+    fun agregarImagen(uri: Uri) {
+        if (_imagenes.size < 5) {
+            _imagenes.add(uri)
+        } else {
+            mostrarErrorTemporal("Máximo 5 imágenes permitidas")
+        }
+    }
+
+    fun eliminarImagen(index: Int) {
+        if (index in _imagenes.indices) {
+            _imagenes.removeAt(index)
+        }
+    }
+
+    fun limpiarImagenes() {
+        _imagenes.clear()
+    }
+
+    fun crearReporte() {
+        if (!validarCampos()) return
+
+        _estadoUI.value = EstadoUI.Cargando
+        _estaCargando.value = true
+
+        viewModelScope.launch {
+            try {
+                val ubicacion = _ubicacionActual.value
+                if (ubicacion == null) {
+                    mostrarErrorTemporal("No se pudo obtener la ubicación")
+                    _estadoUI.value = EstadoUI.Error("Error de ubicación")
+                    _estaCargando.value = false
+                    return@launch
+                }
+
+                val resultado = repositorioReportes.crearReporte(
+                    titulo = titulo.trim(),
+                    descripcion = descripcion.trim(),
+                    tipo = tipoSeleccionado,
+                    gravedad = gravedadSeleccionada,
+                    latitud = ubicacion.latitude,
+                    longitud = ubicacion.longitude,
+                    imagenes = _imagenes
+                )
+
+                if (resultado.isSuccess) {
+                    _estadoUI.value = EstadoUI.Exito
+                    _mensajeExito.value = "✅ Reporte creado exitosamente"
+                    limpiarFormulario()
+                } else {
+                    val error = resultado.exceptionOrNull()?.message ?: "Error desconocido al crear reporte"
+                    mostrarErrorTemporal(error)
+                    _estadoUI.value = EstadoUI.Error(error)
+                }
+            } catch (e: Exception) {
+                val error = "Error al crear reporte: ${e.message}"
+                mostrarErrorTemporal(error)
+                _estadoUI.value = EstadoUI.Error(error)
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    private fun validarCampos(): Boolean {
+        return when {
+            titulo.isBlank() -> {
+                mostrarErrorTemporal("El título es requerido")
+                false
+            }
+            titulo.length < 5 -> {
+                mostrarErrorTemporal("El título debe tener al menos 5 caracteres")
+                false
+            }
+            descripcion.isBlank() -> {
+                mostrarErrorTemporal("La descripción es requerida")
+                false
+            }
+            descripcion.length < 10 -> {
+                mostrarErrorTemporal("La descripción debe tener al menos 10 caracteres")
+                false
+            }
+            _ubicacionActual.value == null -> {
+                mostrarErrorTemporal("Es necesario establecer la ubicación del reporte")
+                false
+            }
+            else -> true
+        }
+    }
+
+    private fun mostrarErrorTemporal(mensaje: String) {
+        mensajeError = mensaje
+        mostrarError = true
+    }
+
+    private fun limpiarErrorSiEsNecesario() {
+        if (mostrarError) {
+            mostrarError = false
+            mensajeError = ""
+        }
+    }
+
+    fun limpiarFormulario() {
+        titulo = ""
+        descripcion = ""
+        tipoSeleccionado = TipoReporte.BACHE
+        gravedadSeleccionada = "Media"
+        _imagenes.clear()
+        mostrarError = false
+        mensajeError = ""
+        _ubicacionActual.value = null
+        _errorUbicacion.value = null
+        _estadoUI.value = EstadoUI.Inicial
+        _mensajeExito.value = null
+    }
+
+    fun reiniciarEstadoUI() {
+        _estadoUI.value = EstadoUI.Inicial
+        _mensajeExito.value = null
+        mostrarError = false
+        mensajeError = ""
+    }
+
+    fun tieneDatos(): Boolean {
+        return titulo.isNotBlank() ||
+                descripcion.isNotBlank() ||
+                _ubicacionActual.value != null ||
+                _imagenes.isNotEmpty()
+    }
+
+    fun obtenerResumenReporte(): Map<String, String> {
+        return mapOf(
+            "titulo" to titulo,
+            "descripcion" to descripcion,
+            "tipo" to when (tipoSeleccionado) {
+                TipoReporte.BACHE -> "Bache"
+                TipoReporte.ALUMBRADO -> "Alumbrado público"
+                TipoReporte.BASURA -> "Basura acumulada"
+                TipoReporte.AGUA -> "Problema de agua"
+                TipoReporte.OTRO -> "Otro"
+            },
+            "gravedad" to gravedadSeleccionada,
+            "ubicacion" to (_ubicacionActual.value?.let { ubicacion ->
+                "Lat: ${"%.6f".format(ubicacion.latitude)}, Lng: ${"%.6f".format(ubicacion.longitude)}"
+            } ?: "No establecida"),
+            "imagenes" to "${_imagenes.size} imagen(es)"
+        )
+    }
+
+    // ✅ AGREGADO: Función para probar Storage
+    fun probarConexionStorage() {
+        _estaCargando.value = true
+        _mensajeExito.value = null
+        mostrarError = false
+
+        servicioFirebase.probarSubidaStorage(
+            onSuccess = { mensaje ->
+                viewModelScope.launch {
+                    _mensajeExito.value = mensaje
+                    _estaCargando.value = false
+                }
+            },
+            onError = { error ->
+                viewModelScope.launch {
+                    mostrarErrorTemporal(error)
+                    _estaCargando.value = false
+                }
+            }
+        )
+    }
+
+    // ✅ AGREGADO: Función para diagnosticar Firebase
+    fun diagnosticarFirebase() {
+        _estaCargando.value = true
+
+        viewModelScope.launch {
+            try {
+                // Diagnosticar Storage
+                val diagnosticoStorage = servicioFirebase.diagnosticarStorage()
+
+                // Diagnosticar Firestore
+                val infoProyecto = servicioFirebase.obtenerInfoProyecto()
+
+                val mensajeDiagnostico = """
+                    🔍 DIAGNÓSTICO FIREBASE:
+                    
+                    📦 STORAGE:
+                    Estado: ${diagnosticoStorage["status"]}
+                    Bucket: ${diagnosticoStorage["bucket"] ?: "No configurado"}
+                    
+                    📚 FIRESTORE:
+                    Proyecto: ${infoProyecto["project_id"]}
+                    Estado: ${if (infoProyecto["error"] == null) "✅ OK" else "❌ ERROR"}
+                    
+                    💡 RECOMENDACIONES:
+                    ${if (diagnosticoStorage["status"] == "ERROR") "1. Ve a Firebase Console > Storage > Comenzar\n" else ""}
+                    ${if (infoProyecto["error"] != null) "2. Verifica conexión a internet\n" else ""}
+                """.trimIndent()
+
+                _mensajeExito.value = mensajeDiagnostico
+
+            } catch (e: Exception) {
+                mostrarErrorTemporal("❌ Error en diagnóstico: ${e.message}")
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun limpiarMensajes() {
+        _mensajeExito.value = null
+        mostrarError = false
+        mensajeError = ""
+    }
+
+    sealed class EstadoUI {
+        object Inicial : EstadoUI()
+        object Cargando : EstadoUI()
+        object Exito : EstadoUI()
+        data class Error(val mensaje: String) : EstadoUI()
+    }
+    fun establecerUbicacion(latitud: Double, longitud: Double) {
+        val location = Location("seleccionada")
+        location.latitude = latitud
+        location.longitude = longitud
+        _ubicacionActual.value = location
+    }
+}
+```
+# viewModelDetalleReporte
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestore
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioComentarios
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import javax.inject.Inject
+/**
+ * ViewModel para la pantalla de detalle de reporte
+ * Maneja la lógica de negocio para visualizar y gestionar reportes individuales
+ *
+ * @property casoUsoReportes Caso de uso para operaciones de reportes
+ * @property savedStateHandle Handle para guardar y restaurar estado
+ */
+@HiltViewModel
+class ViewModelDetalleReporte @Inject constructor(
+    private val repositorioReportes: RepositorioReportes,
+    private val repositorioComentarios: RepositorioComentarios
+) : ViewModel() {
+
+    private val _estadoUI = MutableStateFlow<EstadoUI>(EstadoUI.Inicial)
+    val estadoUI: StateFlow<EstadoUI> = _estadoUI
+
+    private val _cantidadComentarios = MutableStateFlow(0)
+    val cantidadComentarios: StateFlow<Int> = _cantidadComentarios
+
+    /**
+     * Carga los detalles del reporte
+     */
+    fun cargarReporte(reporteId: String) {
+        _estadoUI.value = EstadoUI.Cargando
+        viewModelScope.launch {
+            try {
+                val reporte = repositorioReportes.obtenerReportePorId(reporteId)
+                if (reporte != null) {
+                    // ✅ DIAGNÓSTICO: Verificar qué datos llegan
+                    android.util.Log.d("DETALLE_REPORTE_DEBUG", "📋 REPORTE CARGADO:")
+                    android.util.Log.d("DETALLE_REPORTE_DEBUG", "   ID: ${reporte.id}")
+                    android.util.Log.d("DETALLE_REPORTE_DEBUG", "   Título: ${reporte.titulo}")
+                    android.util.Log.d("DETALLE_REPORTE_DEBUG", "   Usuario Nombre: ${reporte.usuarioNombre}")
+                    android.util.Log.d("DETALLE_REPORTE_DEBUG", "   Usuario Email: ${reporte.usuarioEmail}")
+                    android.util.Log.d("DETALLE_REPORTE_DEBUG", "   Usuario ID: ${reporte.usuarioId}")
+
+                    _estadoUI.value = EstadoUI.Exito(reporte)
+                    cargarCantidadComentarios(reporteId)
+                } else {
+                    _estadoUI.value = EstadoUI.Error("Reporte no encontrado")
+                }
+            } catch (e: Exception) {
+                _estadoUI.value = EstadoUI.Error("Error al cargar el reporte: ${e.message}")
+            }
+        }
+    }
+
+    private fun cargarCantidadComentarios(reporteId: String) {
+        viewModelScope.launch {
+            try {
+                val cantidad = repositorioComentarios.obtenerCantidadComentarios(reporteId)
+                _cantidadComentarios.value = cantidad
+            } catch (e: Exception) {
+                // Ignorar error de cantidad de comentarios
+            }
+        }
+    }
+    /**
+     * Actualiza el estado del reporte
+     * @param nuevoEstado Nuevo estado del reporte
+     */
+    fun actualizarCantidadComentarios(reporteId: String) {
+        cargarCantidadComentarios(reporteId)
+    }
+
+    fun diagnosticarImagenes(reporteId: String) {
+        viewModelScope.launch {
+            try {
+                android.util.Log.d("IMAGEN_DEBUG", "🔍 DIAGNÓSTICO DE IMÁGENES PARA: $reporteId")
+
+                val documento = FirebaseFirestore.getInstance()
+                    .collection("reportes")
+                    .document(reporteId)
+                    .get()
+                    .await()
+
+                if (documento.exists()) {
+                    val datos = documento.data
+                    android.util.Log.d("IMAGEN_DEBUG", "📄 DATOS COMPLETOS DEL DOCUMENTO:")
+                    datos?.forEach { (key, value) ->
+                        android.util.Log.d("IMAGEN_DEBUG", "   $key: $value (${value?.javaClass?.simpleName})")
+                    }
+                } else {
+                    android.util.Log.e("IMAGEN_DEBUG", "❌ Documento no existe")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("IMAGEN_DEBUG", "❌ Error en diagnóstico: ${e.message}")
+            }
+        }
+    }
+
+    sealed class EstadoUI {
+        object Inicial : EstadoUI()
+        object Cargando : EstadoUI()
+        data class Exito(val reporte: Reporte) : EstadoUI()
+        data class Error(val mensaje: String) : EstadoUI()
+    }
+}
+```
+# viewModelEstadisticas.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import java.text.SimpleDateFormat
+import java.util.*
+import javax.inject.Inject
+/**
+ * ViewModel para pantallas de estadísticas y métricas
+ * Maneja la lógica de negocio para visualización de datos estadísticos
+ *
+ * @property casoUsoEstadisticas Caso de uso para operaciones de estadísticas
+ */
+@HiltViewModel
+class ViewModelEstadisticas @Inject constructor(
+    private val repositorioReportes: RepositorioReportes
+) : ViewModel() {
+
+    private val _estadisticas = MutableStateFlow(Estadisticas())
+    val estadisticas: StateFlow<Estadisticas> = _estadisticas
+
+    private val _filtros = MutableStateFlow(FiltrosEstadisticas())
+    val filtros: StateFlow<FiltrosEstadisticas> = _filtros
+
+    private val _estadoUI = MutableStateFlow<EstadoUIEstadisticas>(EstadoUIEstadisticas.Cargando)
+    val estadoUI: StateFlow<EstadoUIEstadisticas> = _estadoUI
+
+    private val _pestanaSeleccionada = MutableStateFlow(0)
+    val pestanaSeleccionada: StateFlow<Int> = _pestanaSeleccionada
+
+    private val _mostrarDialogoFiltros = MutableStateFlow(false)
+    val mostrarDialogoFiltros: StateFlow<Boolean> = _mostrarDialogoFiltros
+
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    init {
+        println("ViewModelEstadisticas inicializado")
+        cargarEstadisticas()
+    }
+
+    /**
+     * Carga las estadísticas generales del sistema
+     */
+    fun cargarEstadisticas() {
+        viewModelScope.launch {
+            _estadoUI.value = EstadoUIEstadisticas.Cargando
+            try {
+                val reportes = repositorioReportes.obtenerTodosLosReportes()
+                println("Reportes obtenidos: ${reportes.size}")
+
+                // Debug: mostrar todos los reportes
+                reportes.forEach { reporte ->
+                    println("Reporte: ID=${reporte.id}, Tipo=${reporte.tipo}, Fecha=${reporte.fechaCreacion}")
+                }
+
+                val reportesFiltrados = aplicarFiltros(reportes)
+                println("Reportes filtrados: ${reportesFiltrados.size}")
+
+                val estadisticasCalculadas = calcularEstadisticasAvanzadas(reportesFiltrados)
+                println("Estadísticas calculadas")
+                println("Distribución por tipo: ${estadisticasCalculadas.distribucionPorTipo}")
+                println("Distribución por estado: ${estadisticasCalculadas.distribucionPorEstado}")
+                println("Tendencia mensual: ${estadisticasCalculadas.tendenciaMensual}")
+
+                _estadisticas.value = estadisticasCalculadas
+                _estadoUI.value = EstadoUIEstadisticas.Exito
+            } catch (e: Exception) {
+                println("Error: ${e.message}")
+                _estadoUI.value = EstadoUIEstadisticas.Error(e.message ?: "Error al cargar estadísticas")
+            }
+        }
+    }
+
+    /**
+     * Actualiza los filtros de estadísticas
+     * @param nuevosFiltros Nuevos filtros a aplicar
+     */
+    fun actualizarFiltros(nuevosFiltros: FiltrosEstadisticas) {
+        _filtros.value = nuevosFiltros
+        cargarEstadisticas()
+    }
+
+    /**
+     * Cambia el período de las estadísticas
+     * @param nuevoPeriodo Nuevo período
+     */
+    fun cambiarPestana(indice: Int) {
+        _pestanaSeleccionada.value = indice
+    }
+
+    fun mostrarDialogoFiltros() {
+        _mostrarDialogoFiltros.value = true
+    }
+
+    fun ocultarDialogoFiltros() {
+        _mostrarDialogoFiltros.value = false
+    }
+
+    fun limpiarFiltros() {
+        _filtros.value = FiltrosEstadisticas()
+        cargarEstadisticas()
+    }
+
+    private fun aplicarFiltros(reportes: List<mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte>): List<mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte> {
+        return reportes.filter { reporte ->
+            val coincideFecha = _filtros.value.fechaInicio?.let { inicio ->
+                _filtros.value.fechaFin?.let { fin ->
+                    reporte.fechaCreacion in inicio..fin
+                } ?: true
+            } ?: true
+
+            val coincideTipo = _filtros.value.tipo?.let { it == reporte.tipo } ?: true
+            val coincideEstado = _filtros.value.estado?.let { it == reporte.estado } ?: true
+            val coincideGravedad = _filtros.value.gravedad?.let { it == reporte.gravedad } ?: true
+
+            coincideFecha && coincideTipo && coincideEstado && coincideGravedad
+        }
+    }
+
+    private fun calcularEstadisticasAvanzadas(reportes: List<mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte>): Estadisticas {
+        val total = reportes.size
+
+        // Debug: contar por tipo
+        println("=== CONTEOS POR TIPO ===")
+        TipoReporte.values().forEach { tipo ->
+            val count = reportes.count { it.tipo == tipo }
+            println("$tipo: $count")
+        }
+
+        // Debug: contar por estado
+        println("=== CONTEOS POR ESTADO ===")
+        EstadoReporte.values().forEach { estado ->
+            val count = reportes.count { it.estado == estado }
+            println("$estado: $count")
+        }
+
+        val resueltos = reportes.count { it.estado == EstadoReporte.RESUELTO }
+        val pendientes = reportes.count { it.estado == EstadoReporte.PENDIENTE }
+        val aprobados = reportes.count { it.estado == EstadoReporte.APROBADO }
+        val rechazados = reportes.count { it.estado == EstadoReporte.RECHAZADO }
+
+        val porcentajeResueltos = if (total > 0) (resueltos * 100.0 / total) else 0.0
+
+        // Distribución por tipo - FIXED: usar mutable map para asegurar todos los tipos
+        val porTipo = mutableMapOf<TipoReporte, Int>()
+        TipoReporte.values().forEach { tipo ->
+            porTipo[tipo] = reportes.count { it.tipo == tipo }
+        }
+
+        // Distribución por estado - FIXED: usar mutable map para asegurar todos los estados
+        val porEstado = mutableMapOf<EstadoReporte, Int>()
+        EstadoReporte.values().forEach { estado ->
+            porEstado[estado] = reportes.count { it.estado == estado }
+        }
+
+        // Distribución por gravedad
+        val porGravedad = reportes.groupBy { it.gravedad }.mapValues { it.value.size }
+
+        // Tendencia mensual (últimos 6 meses) - FIXED
+        val tendenciaMensual = calcularTendenciaMensual(reportes)
+
+        // Reportes más activos (con más comentarios)
+        val reportesMasActivos = reportes.sortedByDescending { it.comentarios.size }.take(5)
+
+        return Estadisticas(
+            totalReportes = total,
+            reportesResueltos = resueltos,
+            reportesPendientes = pendientes,
+            reportesAprobados = aprobados,
+            reportesRechazados = rechazados,
+            porcentajeResueltos = porcentajeResueltos,
+            distribucionPorTipo = porTipo,
+            distribucionPorEstado = porEstado,
+            distribucionPorGravedad = porGravedad,
+            tendenciaMensual = tendenciaMensual,
+            reportesMasActivos = reportesMasActivos,
+            eficienciaPorTipo = emptyMap() // Ya no se usa
+        )
+    }
+
+    private fun calcularTendenciaMensual(reportes: List<mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte>): Map<String, Int> {
+        val calendario = Calendar.getInstance()
+        val tendencia = mutableMapOf<String, Int>()
+
+        // Últimos 6 meses incluyendo el actual
+        repeat(6) { i ->
+            calendario.time = Date()
+            calendario.add(Calendar.MONTH, -i)
+
+            val mes = calendario.get(Calendar.MONTH) // 0-11
+            val año = calendario.get(Calendar.YEAR)
+            val clave = "${obtenerNombreMes(mes)} $año"
+
+            val cantidad = reportes.count { reporte ->
+                // Convertir timestamp a Date y luego a Calendar
+                val fechaReporte = Calendar.getInstance()
+                fechaReporte.time = Date(reporte.fechaCreacion)
+
+                // Comparar año y mes
+                fechaReporte.get(Calendar.YEAR) == año &&
+                        fechaReporte.get(Calendar.MONTH) == mes
+            }
+
+            tendencia[clave] = cantidad
+        }
+
+        // Ordenar cronológicamente
+        return tendencia.toList()
+            .sortedWith(compareByDescending<Pair<String, Int>> {
+                val partes = it.first.split(" ")
+                val mes = when(partes[0]) {
+                    "Ene" -> 1; "Feb" -> 2; "Mar" -> 3; "Abr" -> 4
+                    "May" -> 5; "Jun" -> 6; "Jul" -> 7; "Ago" -> 8
+                    "Sep" -> 9; "Oct" -> 10; "Nov" -> 11; "Dic" -> 12
+                    else -> 0
+                }
+                val año = partes[1].toInt()
+                año * 100 + mes
+            })
+            .reversed() // Para tener el más antiguo primero
+            .toMap()
+    }
+
+    private fun obtenerNombreMes(mes: Int): String {
+        return when (mes) {
+            0 -> "Ene"
+            1 -> "Feb"
+            2 -> "Mar"
+            3 -> "Abr"
+            4 -> "May"
+            5 -> "Jun"
+            6 -> "Jul"
+            7 -> "Ago"
+            8 -> "Sep"
+            9 -> "Oct"
+            10 -> "Nov"
+            11 -> "Dic"
+            else -> "???"
+        }
+    }
+
+    fun exportarDatos() {
+        viewModelScope.launch {
+            _estadoUI.value = EstadoUIEstadisticas.Exportando
+            try {
+                // Simulamos exportación
+                kotlinx.coroutines.delay(2000)
+                _estadoUI.value = EstadoUIEstadisticas.ExitoExportacion("Datos exportados exitosamente")
+            } catch (e: Exception) {
+                _estadoUI.value = EstadoUIEstadisticas.Error("Error al exportar: ${e.message}")
+            }
+        }
+    }
+}
+
+data class Estadisticas(
+    val totalReportes: Int = 0,
+    val reportesResueltos: Int = 0,
+    val reportesPendientes: Int = 0,
+    val reportesAprobados: Int = 0,
+    val reportesRechazados: Int = 0,
+    val porcentajeResueltos: Double = 0.0,
+    val distribucionPorTipo: Map<TipoReporte, Int> = emptyMap(),
+    val distribucionPorEstado: Map<EstadoReporte, Int> = emptyMap(),
+    val distribucionPorGravedad: Map<String, Int> = emptyMap(),
+    val tendenciaMensual: Map<String, Int> = emptyMap(),
+    val reportesMasActivos: List<mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte> = emptyList(),
+    val eficienciaPorTipo: Map<TipoReporte, Double> = emptyMap()
+)
+
+data class FiltrosEstadisticas(
+    val fechaInicio: Long? = null,
+    val fechaFin: Long? = null,
+    val tipo: TipoReporte? = null,
+    val estado: EstadoReporte? = null,
+    val gravedad: String? = null
+) {
+    val tieneFiltros: Boolean
+        get() = fechaInicio != null || fechaFin != null || tipo != null || estado != null || gravedad != null
+}
+
+sealed class EstadoUIEstadisticas {
+    object Cargando : EstadoUIEstadisticas()
+    object Exito : EstadoUIEstadisticas()
+    data class Error(val mensaje: String) : EstadoUIEstadisticas()
+    object Exportando : EstadoUIEstadisticas()
+    data class ExitoExportacion(val mensaje: String) : EstadoUIEstadisticas()
+}
+```
+# viewModelDestionUsuarios.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioUsuarios
+import javax.inject.Inject
+/**
+ * ViewModel para la gestión de usuarios por parte del administrador
+ * Maneja la lógica de negocio para listar, filtrar y gestionar usuarios del sistema
+ *
+ * @property casoUsoGestionUsuarios Caso de uso para operaciones de gestión de usuarios
+ */
+@HiltViewModel
+class ViewModelGestionUsuarios @Inject constructor(
+    private val repositorioUsuarios: RepositorioUsuarios
+) : ViewModel() {
+
+    private val _todosLosUsuarios = MutableStateFlow<List<Usuario>>(emptyList())
+    val todosLosUsuarios: StateFlow<List<Usuario>> = _todosLosUsuarios
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando
+
+    private val _mensaje = MutableStateFlow<String?>(null)
+    val mensaje: StateFlow<String?> = _mensaje
+
+    init {
+        cargarTodosLosUsuarios()
+    }
+
+    fun cargarTodosLosUsuarios() {
+        _estaCargando.value = true
+        viewModelScope.launch {
+            try {
+                // ✅ CORREGIDO: Usar .collect() en el Flow
+                repositorioUsuarios.obtenerTodosLosUsuarios().collect { usuarios ->
+                    _todosLosUsuarios.value = usuarios
+                    _estaCargando.value = false
+                }
+            } catch (e: Exception) {
+                _mensaje.value = "Error al cargar usuarios: ${e.message}"
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun actualizarRolUsuario(usuarioId: String, nuevoRol: RolUsuario) {
+        viewModelScope.launch {
+            try {
+                val resultado = repositorioUsuarios.actualizarRolUsuario(usuarioId, nuevoRol)
+                if (resultado.isSuccess) {
+                    _mensaje.value = "Rol actualizado exitosamente"
+                    // No necesitas recargar manualmente porque el Flow se actualizará automáticamente
+                } else {
+                    _mensaje.value = "Error al actualizar el rol"
+                }
+            } catch (e: Exception) {
+                _mensaje.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun eliminarUsuario(usuarioId: String) {
+        viewModelScope.launch {
+            try {
+                val resultado = repositorioUsuarios.eliminarUsuario(usuarioId)
+                if (resultado.isSuccess) {
+                    _mensaje.value = "Usuario eliminado exitosamente"
+                    // No necesitas recargar manualmente porque el Flow se actualizará automáticamente
+                } else {
+                    _mensaje.value = "Error al eliminar usuario"
+                }
+            } catch (e: Exception) {
+                _mensaje.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun limpiarMensaje() {
+        _mensaje.value = null
+    }
+}
+```
+# viewModelMapa
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import android.location.Location
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import javax.inject.Inject
+/**
+ * ViewModel para la pantalla de mapa interactivo
+ * Maneja la lógica de negocio para mostrar reportes en el mapa y gestionar ubicación
+ *
+ * @property casoUsoReportes Caso de uso para operaciones de reportes
+ * @property servicioUbicacion Servicio para obtener ubicación del dispositivo
+ * @property manejadorMapas Utilidad para operaciones con mapas
+ */
+@HiltViewModel
+class ViewModelMapa @Inject constructor(
+    private val repositorioReportes: RepositorioReportes
+) : ViewModel() {
+
+    private val _reportes = MutableStateFlow<List<Reporte>>(emptyList())
+    val reportes: StateFlow<List<Reporte>> = _reportes
+
+    private val _ubicacionActual = MutableStateFlow<Location?>(null)
+    val ubicacionActual: StateFlow<Location?> = _ubicacionActual
+
+    private val _estaMonitoreandoUbicacion = MutableStateFlow(false)
+    val estaMonitoreandoUbicacion: StateFlow<Boolean> = _estaMonitoreandoUbicacion
+
+    private val _errorUbicacion = MutableStateFlow<String?>(null)
+    val errorUbicacion: StateFlow<String?> = _errorUbicacion
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando
+
+    init {
+        cargarReportes()
+    }
+
+    fun cargarReportes() {
+        _estaCargando.value = true
+        viewModelScope.launch {
+            try {
+                val reportesObtenidos = repositorioReportes.obtenerTodosLosReportes()
+                _reportes.value = reportesObtenidos
+            } catch (e: Exception) {
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun establecerUbicacionManual(latitud: Double, longitud: Double) {
+        val location = Location("manual")
+        location.latitude = latitud
+        location.longitude = longitud
+        _ubicacionActual.value = location
+    }
+    /**
+     * Actualiza los marcadores en el mapa basado en reportes y ubicación del usuario
+     */
+    fun actualizarReportes() {
+        cargarReportes()
+    }
+}
+```
+# viewModelMapaPublico
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import javax.inject.Inject
+/**
+ * ViewModel para el mapa público (accesible sin autenticación)
+ * Maneja la lógica para mostrar reportes públicos en el mapa
+ *
+ * @property casoUsoReportes Caso de uso para operaciones de reportes
+ * @property manejadorMapas Utilidad para operaciones con mapas
+ */
+@HiltViewModel
+class ViewModelMapaPublico @Inject constructor(
+    private val repositorioReportes: RepositorioReportes
+) : ViewModel() {
+
+    private val _reportesPublicos = MutableStateFlow<List<Reporte>>(emptyList())
+    val reportesPublicos: StateFlow<List<Reporte>> = _reportesPublicos
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando
+
+    init {
+        cargarReportesPublicos()
+    }
+    /**
+     * Carga reportes públicos para mostrar en el mapa
+     */
+    fun cargarReportesPublicos() {
+        _estaCargando.value = true
+        viewModelScope.launch {
+            try {
+                val todosReportes = repositorioReportes.obtenerTodosLosReportes()
+
+                // Filtrar solo reportes aprobados o resueltos para vista pública
+                val reportesPublicos = todosReportes.filter { reporte ->
+                    reporte.estado == EstadoReporte.APROBADO ||
+                            reporte.estado == EstadoReporte.RESUELTO
+                }
+
+                // Ordenar por fecha más reciente primero
+                val reportesOrdenados = reportesPublicos.sortedByDescending { it.fechaCreacion }
+
+                _reportesPublicos.value = reportesOrdenados
+                println("✅ Reportes públicos cargados: ${reportesOrdenados.size}")
+                reportesOrdenados.forEach { reporte ->
+                    println("   - ${reporte.titulo} (${reporte.tipo}, ${reporte.estado})")
+                }
+
+            } catch (e: Exception) {
+                println("❌ Error cargando reportes públicos: ${e.message}")
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    /**
+     * Actualiza los marcadores en el mapa público
+     */
+    fun actualizarReportes() {
+        cargarReportesPublicos()
+    }
+}
+```
+# viewModelNotificasiones.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Notificacion
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioAutenticacion
+import mx.edu.utng.mrs.mycomunidad.servicios.ServicioNotificacionesFirestore
+import javax.inject.Inject
+/**
+ * ViewModel para la gestión de notificaciones del usuario
+ * Maneja la lógica de negocio para recibir, mostrar y gestionar notificaciones
+ *
+ * @property casoUsoNotificaciones Caso de uso para operaciones de notificaciones
+ */
+@HiltViewModel
+class ViewModelNotificaciones @Inject constructor(
+    private val servicioNotificaciones: ServicioNotificacionesFirestore,
+    private val repositorioAutenticacion: RepositorioAutenticacion
+) : ViewModel() {
+
+    private val _notificaciones = MutableStateFlow<List<Notificacion>>(emptyList())
+    val notificaciones: StateFlow<List<Notificacion>> = _notificaciones.asStateFlow()
+
+    /**
+     * Carga las notificaciones del usuario actual
+     */
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando.asStateFlow()
+
+    fun cargarNotificaciones() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                val usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+                usuarioActual?.let { usuario ->
+                    val notifs = servicioNotificaciones.obtenerNotificacionesUsuario(usuario.id)
+                    _notificaciones.value = notifs
+                }
+            } catch (e: Exception) {
+                // Manejar error silenciosamente
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun marcarComoLeida(notificacionId: String) {
+        viewModelScope.launch {
+            try {
+                servicioNotificaciones.marcarNotificacionLeida(notificacionId)
+                cargarNotificaciones()
+            } catch (e: Exception) {
+                // Manejar error
+            }
+        }
+    }
+}
+```
+# viewModelPerfil.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioAutenticacion
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioUsuarios
+import mx.edu.utng.mrs.mycomunidad.utilidades.AlmacenamientoSeguro
+import javax.inject.Inject
+/**
+ * ViewModel para la pantalla de perfil de usuario
+ * Maneja la lógica de negocio para visualizar y editar información del perfil
+ *
+ * @property casoUsoUsuario Caso de uso para operaciones de usuario
+ */
+@HiltViewModel
+class ViewModelPerfil @Inject constructor(
+    private val repositorioUsuarios: RepositorioUsuarios,
+    private val repositorioAutenticacion: RepositorioAutenticacion,
+    private val almacenamientoSeguro: AlmacenamientoSeguro
+) : ViewModel() {
+    /**
+     * Carga el perfil del usuario actual
+     */
+    private val _usuario = MutableStateFlow<Usuario?>(null)
+    val usuario: StateFlow<Usuario?> = _usuario.asStateFlow()
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _estadisticas = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val estadisticas: StateFlow<Map<String, Int>> = _estadisticas.asStateFlow()
+
+    private val _mensajeExito = MutableStateFlow<String?>(null)
+    val mensajeExito: StateFlow<String?> = _mensajeExito.asStateFlow()
+
+    init {
+        cargarPerfil()
+    }
+    /**
+     * Carga las estadísticas del usuario
+     */ 
+
+    fun cargarPerfil() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            try {
+                var usuarioActual = almacenamientoSeguro.obtenerUsuarioActual()
+                if (usuarioActual == null) {
+                    usuarioActual = repositorioAutenticacion.obtenerUsuarioActual()
+                    usuarioActual?.let {
+                        almacenamientoSeguro.guardarSesionUsuario(it)
+                    }
+                }
+                if (usuarioActual != null) {
+                    _usuario.value = usuarioActual
+                    cargarEstadisticasUsuario(usuarioActual.id)
+                    _error.value = null
+                } else {
+                    _error.value = "No se pudo cargar la información del usuario"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al cargar perfil: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun actualizarPerfil(nombre: String, email: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _mensajeExito.value = null
+            _error.value = null
+            try {
+                val usuarioActual = _usuario.value
+                if (usuarioActual == null) {
+                    _error.value = "No hay información de usuario cargada"
+                    return@launch
+                }
+                if (nombre.isBlank()) {
+                    _error.value = "El nombre no puede estar vacío"
+                    return@launch
+                }
+                if (email.isBlank() || !email.contains("@")) {
+                    _error.value = "Email no válido"
+                    return@launch
+                }
+                val resultado = repositorioUsuarios.actualizarUsuario(
+                    usuarioId = usuarioActual.id,
+                    nombre = nombre,
+                    email = email
+                )
+                if (resultado.isSuccess) {
+                    val usuarioActualizado = usuarioActual.copy(nombre = nombre, email = email)
+                    almacenamientoSeguro.guardarSesionUsuario(usuarioActualizado)
+                    _usuario.value = usuarioActualizado
+                    _mensajeExito.value = "Perfil actualizado correctamente"
+                    _error.value = null
+                } else {
+                    _error.value = "Error al actualizar perfil: ${resultado.exceptionOrNull()?.message}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al actualizar perfil: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun actualizarImagenPerfil(imagenUrl: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _mensajeExito.value = null
+            _error.value = null
+            try {
+                val usuarioActual = _usuario.value
+                if (usuarioActual == null) {
+                    _error.value = "No hay información de usuario cargada"
+                    return@launch
+                }
+                val resultado = repositorioUsuarios.actualizarImagenPerfil(
+                    usuarioId = usuarioActual.id,
+                    imagenUrl = imagenUrl
+                )
+                if (resultado.isSuccess) {
+                    val usuarioActualizado = usuarioActual.copy(imagenPerfil = imagenUrl)
+                    almacenamientoSeguro.guardarSesionUsuario(usuarioActualizado)
+                    _usuario.value = usuarioActualizado
+                    _mensajeExito.value = "Imagen de perfil actualizada correctamente"
+                    _error.value = null
+                } else {
+                    _error.value = "Error al actualizar imagen: ${resultado.exceptionOrNull()?.message}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al actualizar imagen: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun cambiarContrasena(contrasenaActual: String, nuevaContrasena: String) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _mensajeExito.value = null
+            _error.value = null
+            try {
+                val usuarioActual = _usuario.value
+                if (usuarioActual == null) {
+                    _error.value = "No hay información de usuario cargada"
+                    return@launch
+                }
+                if (nuevaContrasena.length < 6) {
+                    _error.value = "La nueva contraseña debe tener al menos 6 caracteres"
+                    return@launch
+                }
+                val resultado = repositorioUsuarios.cambiarContrasena(
+                    usuarioId = usuarioActual.id,
+                    nuevaContrasena = nuevaContrasena
+                )
+                if (resultado.isSuccess) {
+                    _mensajeExito.value = "Contraseña actualizada correctamente"
+                    _error.value = null
+                } else {
+                    _error.value = "Error al cambiar contraseña: ${resultado.exceptionOrNull()?.message}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al cambiar contraseña: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun actualizarPerfilComoAdmin(usuarioId: String, nombre: String, email: String, rol: RolUsuario) {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _mensajeExito.value = null
+            _error.value = null
+            try {
+                val adminActual = _usuario.value
+                if (adminActual?.rol != RolUsuario.ADMINISTRADOR) {
+                    _error.value = "No tienes permisos de administrador"
+                    return@launch
+                }
+                if (nombre.isBlank()) {
+                    _error.value = "El nombre no puede estar vacío"
+                    return@launch
+                }
+                if (email.isBlank() || !email.contains("@")) {
+                    _error.value = "Email no válido"
+                    return@launch
+                }
+                val resultadoActualizar = repositorioUsuarios.actualizarUsuario(
+                    usuarioId = usuarioId,
+                    nombre = nombre,
+                    email = email
+                )
+                if (resultadoActualizar.isSuccess) {
+                    val resultadoRol = repositorioUsuarios.actualizarRolUsuario(usuarioId, rol)
+                    if (resultadoRol.isSuccess) {
+                        _mensajeExito.value = "Perfil actualizado correctamente como administrador"
+                        _error.value = null
+                        if (usuarioId == adminActual.id) {
+                            val adminActualizado = adminActual.copy(nombre = nombre, email = email, rol = rol)
+                            almacenamientoSeguro.guardarSesionUsuario(adminActualizado)
+                            _usuario.value = adminActualizado
+                        }
+                    } else {
+                        _error.value = "Perfil actualizado pero error al cambiar rol: ${resultadoRol.exceptionOrNull()?.message}"
+                    }
+                } else {
+                    _error.value = "Error al actualizar perfil: ${resultadoActualizar.exceptionOrNull()?.message}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al actualizar perfil: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    // ============== FUNCIÓN PARA ELIMINACIÓN POR EMAIL ==============
+
+    fun enviarEmailEliminacion(context: Context): Boolean {
+        val usuarioActual = _usuario.value
+        val email = usuarioActual?.email
+
+        if (email.isNullOrEmpty()) {
+            _error.value = "No se pudo obtener el email para eliminación"
+            return false
+        }
+
+        try {
+            // Correo para solicitar eliminación de cuenta
+            val subject = "Solicitud de Eliminación de Cuenta - Mi Comunidad App"
+            val body = """
+                Hola equipo de soporte,
+                
+                Solicito la eliminación de mi cuenta en la aplicación Mi Comunidad.
+                
+                Información de mi cuenta:
+                • Email: $email
+                • Nombre: ${usuarioActual?.nombre ?: "No disponible"}
+                • ID de usuario: ${usuarioActual?.id ?: "No disponible"}
+                
+                Por favor, procedan con la eliminación de todos mis datos personales 
+                de acuerdo con las políticas de privacidad.
+                
+                Atentamente,
+                ${usuarioActual?.nombre ?: "Usuario"}
+                
+                ---
+                Este es un correo automático generado desde la aplicación Mi Comunidad.
+            """.trimIndent()
+
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:1224100827.mrs@gmail.com")
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, body)
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("1224100827.mrs@gmail.com"))
+            }
+
+            if (intent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(intent)
+                return true
+            } else {
+                _error.value = "No se encontró una aplicación de email en tu dispositivo. Por favor, envía un correo manualmente a: 1224100827.mrs@gmail.com"
+                return false
+            }
+        } catch (e: Exception) {
+            _error.value = "Error al abrir el email: ${e.message}"
+            return false
+        }
+    }
+
+    fun obtenerEmailSoporte(): String {
+        return "1224100827.mrs@gmail.com"
+    }
+
+    private suspend fun cargarEstadisticasUsuario(usuarioId: String) {
+        try {
+            val stats = repositorioUsuarios.obtenerEstadisticasUsuario(usuarioId)
+            _estadisticas.value = stats
+        } catch (e: Exception) {
+            _estadisticas.value = emptyMap()
+        }
+    }
+
+    fun limpiarError() {
+        _error.value = null
+    }
+
+    fun limpiarMensajeExito() {
+        _mensajeExito.value = null
+    }
+
+    fun recargarPerfil() {
+        cargarPerfil()
+    }
+
+    fun esAdministrador(): Boolean {
+        return _usuario.value?.rol == RolUsuario.ADMINISTRADOR
+    }
+
+    fun obtenerUsuarioId(): String? {
+        return _usuario.value?.id
+    }
+}
+```
+# viewModelReportes.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioAutenticacion
+import javax.inject.Inject
+
+@HiltViewModel
+/**
+ * ViewModel para gestionar la lógica de negocio y el estado relacionado con reportes generales.
+ *
+ * Este ViewModel se encarga de:
+ * - Obtener y filtrar listas de reportes
+ * - Manejar el estado de carga/error de las operaciones
+ * - Procesar acciones del usuario sobre reportes
+ *
+ * @property reportsRepository Repositorio para acceder a los datos de reportes
+ * @property userId ID del usuario actual para personalización de datos
+ */
+class ViewModelReportes @Inject constructor(
+    private val repositorioReportes: RepositorioReportes,
+    private val repositorioAutenticacion: RepositorioAutenticacion
+) : ViewModel() {
+
+    private val _reportes = MutableStateFlow<List<Reporte>>(emptyList())
+    val reportes: StateFlow<List<Reporte>> = _reportes.asStateFlow()
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+    /**
+     * Estados posibles para el flujo de reportes.
+     */
+    fun cargarReportes() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _error.value = null
+
+            try {
+                val listaReportes = repositorioReportes.obtenerTodosLosReportes()
+                val reportesFiltrados = listaReportes.filter { reporte ->
+                    reporte.estado == EstadoReporte.APROBADO || reporte.estado == EstadoReporte.RESUELTO
+                }
+                _reportes.value = reportesFiltrados
+                println("✅ Reportes comunidad cargados: ${reportesFiltrados.size}")
+
+            } catch (e: Exception) {
+                _error.value = "Error al cargar reportes: ${e.message}"
+                println("❌ Error en cargarReportes: ${e.message}")
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    fun obtenerUsuarioActualId(): String {
+        return repositorioAutenticacion.obtenerUsuarioActual()?.id ?: ""
+    }
+
+    fun alternarMeGusta(reporteId: String) {
+        viewModelScope.launch {
+            try {
+                repositorioReportes.alternarMeGusta(reporteId)
+                cargarReportes()
+            } catch (e: Exception) {
+                _error.value = "Error al dar like: ${e.message}"
+            }
+        }
+    }
+    fun limpiarError() {
+        _error.value = null
+    }
+}
+```
+# viewModelReportesPublicos.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import javax.inject.Inject
+
+@HiltViewModel
+/**
+ * ViewModel para la selección y gestión de ubicaciones geográficas.
+ *
+ * Maneja la interacción con servicios de ubicación, búsqueda de lugares
+ * y selección de coordenadas. Incluye validación de permisos y manejo
+ * de errores de geolocalización.
+ *
+ * @property locationRepository Repositorio para operaciones de ubicación
+ * @property permissionsManager Gestor de permisos de la aplicación
+ */
+class ViewModelReportesPublicos @Inject constructor(
+    private val repositorioReportes: RepositorioReportes
+) : ViewModel() {
+    /**
+     * Solicita permisos de ubicación al usuario.
+     *
+     * Verifica y solicita los permisos necesarios para acceder
+     * a la ubicación del dispositivo.
+     */
+
+    private val _reportesPublicos = MutableStateFlow<List<Reporte>>(emptyList())
+    val reportesPublicos: StateFlow<List<Reporte>> = _reportesPublicos.asStateFlow()
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    fun cargarReportesPublicos() {
+        viewModelScope.launch {
+            _estaCargando.value = true
+            _error.value = null
+
+            try {
+                val reportesFiltrados = repositorioReportes.obtenerReportesPublicos()
+                _reportesPublicos.value = reportesFiltrados
+            } catch (e: Exception) {
+                _error.value = "Error al cargar reportes públicos: ${e.message}"
+            } finally {
+                _estaCargando.value = false
+            }
+        }
+    }
+}
+```
+# viewModelSeleccionUbicasion.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
+import android.os.Looper
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.android.gms.location.*
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+/**
+ * ViewModel para la gestión de la selección de ubicación en la aplicación.
+ *
+ * Este ViewModel maneja toda la lógica relacionada con:
+ * - Obtención de la ubicación actual del dispositivo
+ * - Búsqueda de ubicaciones mediante texto
+ * - Selección manual de ubicación en mapa
+ * - Gestión de permisos de ubicación
+ * - Validación de ubicaciones seleccionadas
+ *
+ * El ViewModel sigue el patrón de diseño MVI (Model-View-Intent) utilizando
+ * flujos reactivos para la gestión del estado.
+ *
+ * @property locationRepository Repositorio para operaciones de geolocalización
+ * @property permissionsManager Gestor de permisos de la aplicación
+ * @property geocoderService Servicio para geocodificación (dirección → coordenadas)
+ *
+ * @see LocationRepository
+ * @see PermissionsManager
+ *  * @since 1.0.0
+ *  * @author TuEquipo
+ *  */
+class ViewModelSeleccionUbicacion : ViewModel() {
+    /**
+     * Estado actual de la selección de ubicación.
+     *
+     * Este estado encapsula todos los aspectos de la funcionalidad
+     * de selección de ubicación incluyendo:
+     * - Ubicación actual del dispositivo
+     * - Ubicación seleccionada por el usuario
+     * - Resultados de búsqueda
+     * - Estado de permisos
+     * - Errores y estados de carga
+     */
+    private val _ubicacionSeleccionada = MutableStateFlow<LatLng?>(null)
+    val ubicacionSeleccionada: StateFlow<LatLng?> = _ubicacionSeleccionada
+    /**
+     * Estado actual de la selección de ubicación.
+     *
+     * Este estado encapsula todos los aspectos de la funcionalidad
+     * de selección de ubicación incluyendo:
+     * - Ubicación actual del dispositivo
+     * - Ubicación seleccionada por el usuario
+     * - Resultados de búsqueda
+     * - Estado de permisos
+     * - Errores y estados de carga
+     */
+    private val _ubicacionActual = MutableStateFlow<Location?>(null)
+    val ubicacionActual: StateFlow<Location?> = _ubicacionActual
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
+    private val _estaCargando = MutableStateFlow(false)
+    val estaCargando: StateFlow<Boolean> = _estaCargando
+
+    private var fusedLocationClient: FusedLocationProviderClient? = null
+    private var locationCallback: LocationCallback? = null
+
+    fun inicializarUbicacion(context: Context) {
+        if (tienePermisosUbicacion(context)) {
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            obtenerUltimaUbicacionConocida(context)
+        }
+    }
+
+    fun establecerUbicacionSeleccionada(latitud: Double, longitud: Double) {
+        _ubicacionSeleccionada.value = LatLng(latitud, longitud)
+    }
+
+    fun seleccionarUbicacion(latLng: LatLng) {
+        _ubicacionSeleccionada.value = latLng
+    }
+
+    fun obtenerUbicacionActual(context: Context) {
+        _estaCargando.value = true
+        _error.value = null
+
+        if (tienePermisosUbicacion(context)) {
+            if (estaGPSHabilitado(context)) {
+                obtenerUbicacionPrecisa(context)
+            } else {
+                _error.value = "El GPS está desactivado. Actívalo para obtener tu ubicación."
+                _estaCargando.value = false
+            }
+        } else {
+            _error.value = "Se necesitan permisos de ubicación"
+            _estaCargando.value = false
+        }
+    }
+
+    private fun tienePermisosUbicacion(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun estaGPSHabilitado(context: Context): Boolean {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun obtenerUbicacionPrecisa(context: Context) {
+        viewModelScope.launch {
+            try {
+                // Detener cualquier callback anterior
+                locationCallback?.let {
+                    fusedLocationClient?.removeLocationUpdates(it)
+                }
+
+                val locationRequest = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    LocationRequest.Builder(
+                        Priority.PRIORITY_HIGH_ACCURACY,
+                        10000L
+                    ).apply {
+                        setMinUpdateIntervalMillis(5000L)
+                        setWaitForAccurateLocation(true)
+                    }.build()
+                } else {
+                    LocationRequest.create().apply {
+                        priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+                        interval = 10000L
+                        fastestInterval = 5000L
+                    }
+                }
+
+                locationCallback = object : LocationCallback() {
+                    override fun onLocationResult(locationResult: LocationResult) {
+                        locationResult.lastLocation?.let { location ->
+                            _ubicacionActual.value = location
+                            _ubicacionSeleccionada.value = LatLng(location.latitude, location.longitude)
+                            _estaCargando.value = false
+
+                            // Detener actualizaciones después de obtener una ubicación precisa
+                            fusedLocationClient?.removeLocationUpdates(this)
+                        }
+                    }
+
+                    override fun onLocationAvailability(availability: LocationAvailability) {
+                        if (!availability.isLocationAvailable) {
+                            _error.value = "Ubicación no disponible"
+                            _estaCargando.value = false
+                        }
+                    }
+                }
+
+                fusedLocationClient?.requestLocationUpdates(
+                    locationRequest,
+                    locationCallback!!,
+                    Looper.getMainLooper()
+                )
+
+                // También obtener la última ubicación conocida como respaldo
+                fusedLocationClient?.lastLocation
+                    ?.addOnSuccessListener { location ->
+                        location?.let {
+                            _ubicacionActual.value = it
+                            _ubicacionSeleccionada.value = LatLng(it.latitude, it.longitude)
+                        }
+                        _estaCargando.value = false
+                    }
+                    ?.addOnFailureListener { e ->
+                        _error.value = "Error al obtener ubicación: ${e.message}"
+                        _estaCargando.value = false
+                    }
+
+            } catch (e: SecurityException) {
+                _error.value = "Error de permisos: ${e.message}"
+                _estaCargando.value = false
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+                _estaCargando.value = false
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun obtenerUltimaUbicacionConocida(context: Context) {
+        if (tienePermisosUbicacion(context)) {
+            try {
+                fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+                    location?.let {
+                        _ubicacionActual.value = it
+                        _ubicacionSeleccionada.value = LatLng(it.latitude, it.longitude)
+                    }
+                }?.addOnFailureListener { e ->
+                    // Solo registrar el error, no mostrar al usuario
+                    println("Error al obtener última ubicación: ${e.message}")
+                }
+            } catch (e: SecurityException) {
+                // No hacer nada si hay excepción de seguridad
+                println("SecurityException al obtener última ubicación: ${e.message}")
+            }
+        }
+    }
+
+    fun establecerUbicacionManual(latitud: Double, longitud: Double) {
+        _ubicacionSeleccionada.value = LatLng(latitud, longitud)
+        val location = Location("manual")
+        location.latitude = latitud
+        location.longitude = longitud
+        _ubicacionActual.value = location
+    }
+
+    fun limpiarError() {
+        _error.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Limpiar callbacks al destruir el ViewModel
+        locationCallback?.let {
+            fusedLocationClient?.removeLocationUpdates(it)
+        }
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
