@@ -5144,6 +5144,6953 @@ class ManejadorMapas(private val context: Context) {
     }
 }
 ```
+# Administrador 
+#PantallaGestionUsuario.kt 
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAdministrador
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+/**
+ * Pantalla para la gestión de usuarios por parte del administrador
+ * Permite ver, buscar, filtrar y gestionar usuarios del sistema
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja la lógica de gestión de usuarios
+ * @param onNavigateBack Callback para regresar a la pantalla anterior
+ * @param onNavigateToUserDetail Callback para navegar al detalle de un usuario
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaGestionUsuarios(
+    onNavegarAtras: () -> Unit,
+    viewModel: ViewModelAdministrador = hiltViewModel()
+) {
+    val usuarios by viewModel.usuarios.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+    val mensajeError by viewModel.mensajeError.collectAsState()
+    var textoBusqueda by remember { mutableStateOf(TextFieldValue()) }
+    var usuarioAEliminar by remember { mutableStateOf<Usuario?>(null) }
+    var mostrarDialogoEliminar by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarUsuarios()
+    }
+
+    /**
+     * Componente de la lista de usuarios para administrador
+     *
+     * @param users Lista de usuarios a mostrar
+     * @param onUserClick Callback cuando se hace clic en un usuario
+     * @param onToggleUserStatus Callback para activar/desactivar usuario
+     */
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Gestión de Usuarios") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { paddingValores ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValores)
+                .padding(16.dp)
+        ) {
+            if (!mensajeError.isNullOrEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.Red.copy(alpha = 0.1f)
+                    )
+                ) {
+                    Text(
+                        text = "ERROR: $mensajeError",
+                        color = Color.Red,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = textoBusqueda,
+                onValueChange = { textoBusqueda = it },
+                label = { Text("Buscar usuarios...") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = "Buscar")
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    EstadisticaUsuario(
+                        titulo = "Total",
+                        valor = usuarios.size.toString(),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    EstadisticaUsuario(
+                        titulo = "Administradores",
+                        valor = usuarios.count { it.rol == RolUsuario.ADMINISTRADOR }.toString(),
+                        color = Color(0xFF2196F3)
+                    )
+                    EstadisticaUsuario(
+                        titulo = "Usuarios",
+                        valor = usuarios.count { it.rol == RolUsuario.USUARIO }.toString(),
+                        color = Color(0xFF4CAF50)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFFF3CD)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    Text(
+                        "🔍 INFORMACIÓN DE DEBUG:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF856404)
+                    )
+                    Text(
+                        "Usuarios cargados: ${usuarios.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF856404)
+                    )
+                    Text(
+                        "Estado carga: ${if (estaCargando) "CARGANDO..." else "COMPLETADO"}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF856404)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (estaCargando && usuarios.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Cargando usuarios...")
+                        Text(
+                            "Revisa Logcat para ver el progreso",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else if (usuarios.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Sin usuarios",
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "No hay usuarios registrados",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            "Verifica Firestore Console",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                val usuariosFiltrados = if (textoBusqueda.text.isBlank()) {
+                    usuarios
+                } else {
+                    usuarios.filter { usuario ->
+                        usuario.nombre.contains(textoBusqueda.text, ignoreCase = true) ||
+                                usuario.email.contains(textoBusqueda.text, ignoreCase = true)
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(usuariosFiltrados) { usuario ->
+                        TarjetaUsuario(
+                            usuario = usuario,
+                            onEliminar = {
+                                usuarioAEliminar = usuario
+                                mostrarDialogoEliminar = true
+                            },
+                            onCambiarRol = { nuevoRol ->
+                                viewModel.actualizarRolUsuario(usuario.id, nuevoRol)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (mostrarDialogoEliminar && usuarioAEliminar != null) {
+        AlertDialog(
+            onDismissRequest = {
+                mostrarDialogoEliminar = false
+                usuarioAEliminar = null
+            },
+            title = { Text("Eliminar Usuario") },
+            text = {
+                Text("¿Estás seguro de que deseas eliminar al usuario ${usuarioAEliminar?.nombre}? Esta acción no se puede deshacer.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        usuarioAEliminar?.let { usuario ->
+                            viewModel.eliminarUsuario(usuario.id)
+                        }
+                        mostrarDialogoEliminar = false
+                        usuarioAEliminar = null
+                    }
+                ) {
+                    Text("Eliminar", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        mostrarDialogoEliminar = false
+                        usuarioAEliminar = null
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun EstadisticaUsuario(
+    titulo: String,
+    valor: String,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            valor,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            titulo,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun TarjetaUsuario(
+    usuario: Usuario,
+    onEliminar: () -> Unit,
+    onCambiarRol: (RolUsuario) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(25.dp))
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Usuario",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        usuario.nombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        usuario.email,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = usuario.rol.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = when (usuario.rol) {
+                            RolUsuario.ADMINISTRADOR -> Color(0xFF2196F3)
+                            RolUsuario.USUARIO -> Color(0xFF4CAF50)
+                        },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                color = when (usuario.rol) {
+                                    RolUsuario.ADMINISTRADOR -> Color(0xFF2196F3).copy(alpha = 0.1f)
+                                    RolUsuario.USUARIO -> Color(0xFF4CAF50).copy(alpha = 0.1f)
+                                }
+                            )
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onEliminar,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar usuario",
+                        tint = Color.Red
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (usuario.rol == RolUsuario.USUARIO) {
+                    Button(
+                        onClick = { onCambiarRol(RolUsuario.ADMINISTRADOR) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF2196F3)
+                        )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Security,
+                                contentDescription = "Hacer admin",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Hacer Admin")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = { onCambiarRol(RolUsuario.USUARIO) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Hacer usuario",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Hacer Usuario")
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = { },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Visibility,
+                            contentDescription = "Ver reportes",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Reportes")
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Registrado: ${formatearFecha(usuario.fechaCreacion)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    if (usuario.estaActivo) "Activo" else "Inactivo",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (usuario.estaActivo) Color(0xFF4CAF50) else Color(0xFFF44336)
+                )
+            }
+        }
+    }
+}
+
+private fun formatearFecha(tiempoMillis: Long): String {
+    val fecha = Date(tiempoMillis)
+    val formateador = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    return formateador.format(fecha)
+}
+```
+# PantallaPanelAdministrador.kt
+```package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAdministrador
+/**
+ * Panel principal de administrador con métricas y acceso rápido a funciones
+ * Muestra estadísticas generales del sistema y enlaces a diferentes módulos
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja los datos del panel
+ * @param onNavigateToUsers Callback para navegar a gestión de usuarios
+ * @param onNavigateToReports Callback para navegar a validación de reportes
+ * @param onNavigateToStatistics Callback para navegar a estadísticas detalladas
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaPanelAdministrador(
+
+    /**
+     * Componente de métricas del sistema
+     *
+     * @param metrics Datos de métricas a mostrar
+     */
+    onNavegarAValidacion: () -> Unit,
+    onNavegarAGestionUsuarios: () -> Unit,
+    onNavegarAReportesAprobados: () -> Unit,
+    onNavegarAEstadisticas: () -> Unit,
+    onNavegarAPerfil: () -> Unit,
+    onCerrarSesion: () -> Unit,
+    viewModel: ViewModelAdministrador = hiltViewModel()
+) {
+    // Implementación del panel de administrador
+    // Incluiría: métricas, gráficos rápidos, accesos directos
+    val reportesPendientes by viewModel.reportesPendientes.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+    val totalUsuarios by viewModel.totalUsuarios.collectAsState()
+    val reportesResueltos by viewModel.reportesResueltos.collectAsState()
+    val reportesUrgentes by viewModel.reportesUrgentes.collectAsState()
+    val conteoPorPrioridad by viewModel.conteoPorPrioridad.collectAsState()
+    val usuarioAdministrador by viewModel.usuarioAdministrador.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarDatosCompletos()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Panel de Administración")
+                        usuarioAdministrador?.let { usuario ->
+                            Text(
+                                "Hola, ${usuario.nombre}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                actions = {
+                    // Botón para ir al perfil
+                    IconButton(onClick = onNavegarAPerfil) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "Mi Perfil",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    IconButton(onClick = onCerrarSesion) {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Cerrar Sesión",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValores ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValores)
+                .padding(16.dp)
+        ) {
+            // Tarjetas de Estadísticas
+            Text(
+                "Resumen del Sistema",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Tarjeta Reportes Pendientes
+                TarjetaEstadistica(
+                    titulo = "Pendientes",
+                    valor = reportesPendientes.size.toString(),
+                    icono = Icons.Default.PendingActions,
+                    color = Color(0xFFFF9800),
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Tarjeta Total Usuarios
+                TarjetaEstadistica(
+                    titulo = "Usuarios",
+                    valor = totalUsuarios.toString(),
+                    icono = Icons.Default.People,
+                    color = Color(0xFF2196F3),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Tarjeta Reportes Resueltos
+                TarjetaEstadistica(
+                    titulo = "Resueltos",
+                    valor = reportesResueltos.toString(),
+                    icono = Icons.Default.Verified,
+                    color = Color(0xFF4CAF50),
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Tarjeta Reportes Urgentes
+                TarjetaEstadistica(
+                    titulo = "Urgentes",
+                    valor = reportesUrgentes.toString(),
+                    icono = Icons.Default.Warning,
+                    color = Color(0xFFF44336),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Conteo por Prioridad
+            Text(
+                "Reportes por Prioridad",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val prioridades = listOf("Baja", "Media", "Alta", "Urgente")
+                prioridades.forEach { prioridad ->
+                    ChipPrioridad(
+                        prioridad = prioridad,
+                        cantidad = conteoPorPrioridad[prioridad] ?: 0,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Sección de Acciones Rápidas
+            Text(
+                "Acciones Rápidas",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Botón Validar Reportes
+                BotonAccionAdministrador(
+                    titulo = "Validar Reportes Pendientes",
+                    subtitulo = "${reportesPendientes.size} reportes esperando aprobación",
+                    icono = Icons.Default.Report,
+                    onClick = onNavegarAValidacion
+                )
+
+                // Botón Gestión de Usuarios
+                BotonAccionAdministrador(
+                    titulo = "Gestión de Usuarios",
+                    subtitulo = "Administrar usuarios del sistema",
+                    icono = Icons.Default.People,
+                    onClick = onNavegarAGestionUsuarios
+                )
+
+                // Botón Estadísticas Detalladas
+                BotonAccionAdministrador(
+                    titulo = "Estadísticas Detalladas",
+                    subtitulo = "Ver reportes y métricas avanzadas",
+                    icono = Icons.Default.BarChart,
+                    onClick = onNavegarAEstadisticas
+                )
+
+                // Botón Reportes Aprobados
+                BotonAccionAdministrador(
+                    titulo = "Reportes Aprobados",
+                    subtitulo = "Ver reportes aprobados recientemente",
+                    icono = Icons.Default.Verified,
+                    onClick = onNavegarAReportesAprobados
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Lista de Reportes Pendientes Recientes
+            Text(
+                "Reportes Pendientes Recientes",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            if (estaCargando) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (reportesPendientes.isEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = "Sin reportes",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "No hay reportes pendientes",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            "Todos los reportes han sido revisados",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(reportesPendientes.take(5)) { reporte ->
+                        TarjetaReportePendiente(
+                            reporte = reporte,
+                            onClick = { onNavegarAValidacion() }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TarjetaEstadistica(
+    titulo: String,
+    valor: String,
+    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icono,
+                contentDescription = titulo,
+                modifier = Modifier.size(32.dp),
+                tint = color
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                valor,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                titulo,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun ChipPrioridad(
+    prioridad: String,
+    cantidad: Int,
+    modifier: Modifier = Modifier
+) {
+    val color = when (prioridad) {
+        "Urgente" -> Color(0xFFF44336)
+        "Alta" -> Color(0xFFFF9800)
+        "Media" -> Color(0xFF2196F3)
+        "Baja" -> Color(0xFF4CAF50)
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                prioridad,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                cantidad.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BotonAccionAdministrador(
+    titulo: String,
+    subtitulo: String,
+    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icono,
+                contentDescription = titulo,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    subtitulo,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = "Ir",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TarjetaReportePendiente(
+    reporte: Reporte,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    reporte.titulo,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    reporte.gravedad,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = when (reporte.gravedad) {
+                        "Urgente" -> Color(0xFFF44336)
+                        "Alta" -> Color(0xFFFF9800)
+                        "Media" -> Color(0xFF2196F3)
+                        "Baja" -> Color(0xFF4CAF50)
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(
+                            color = when (reporte.gravedad) {
+                                "Urgente" -> Color(0xFFF44336).copy(alpha = 0.1f)
+                                "Alta" -> Color(0xFFFF9800).copy(alpha = 0.1f)
+                                "Media" -> Color(0xFF2196F3).copy(alpha = 0.1f)
+                                "Baja" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
+                                else -> MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        )
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                reporte.descripcion,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Por: ${reporte.usuarioNombre}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Hace: ${obtenerTiempoTranscurrido(reporte.fechaCreacion)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+// Función auxiliar para formatear tiempo
+private fun obtenerTiempoTranscurrido(tiempoMillis: Long): String {
+    val diferencia = System.currentTimeMillis() - tiempoMillis
+    val minutos = diferencia / (1000 * 60)
+    val horas = minutos / 60
+    val dias = horas / 24
+
+    return when {
+        minutos < 1 -> "Hace un momento"
+        minutos < 60 -> "Hace $minutos min"
+        horas < 24 -> "Hace $horas h"
+        else -> "Hace $dias d"
+    }
+}
+```
+# PantallaPerfilAdministrador.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAdministrador
+import java.text.SimpleDateFormat
+import java.util.*
+/**
+ * Pantalla de perfil específica para administradores
+ * Incluye funciones adicionales y configuración del sistema
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param adminUser Datos del usuario administrador
+ * @param onEditProfile Callback para editar perfil
+ * @param onSystemSettings Callback para configuraciones del sistema
+ * @param onLogout Callback para cerrar sesión
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaPerfilAdministrador(
+    onVolver: () -> Unit,
+    viewModel: ViewModelAdministrador = hiltViewModel()
+) {
+    // Implementación del perfil de administrador
+    // Incluiría: información del admin, funciones especiales, configuración
+    val usuario by viewModel.usuarioAdministrador.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+    val mensajeError by viewModel.mensajeError.collectAsState()
+    val mensajeExito by viewModel.mensajeExito.collectAsState()
+
+    var mostrarDialogoEditar by remember { mutableStateOf(false) }
+    var nombreTemp by remember { mutableStateOf("") }
+    var emailTemp by remember { mutableStateOf("") }
+
+    // Obtener fecha y hora de creación de la cuenta
+    val fechaCreacionCuenta = remember(usuario?.fechaCreacion) {
+        obtenerFechaHoraCreacion(usuario?.fechaCreacion)
+    }
+    /**
+     * Componente de acciones de administrador en el perfil
+     *
+     * @param onSystemSettings Callback para configuraciones del sistema
+     * @param onBackup Callback para crear backup
+     * @param onAuditLog Callback para ver registros de auditoría
+     */
+
+    // Hora actual para "Último acceso"
+    val horaActual = remember { obtenerHoraActualFormateada() }
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarPerfilAdministrador()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.limpiarError()
+            viewModel.limpiarMensajeExito()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Mi Perfil - Administrador") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                navigationIcon = {
+                    IconButton(onClick = onVolver) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        usuario?.let {
+                            nombreTemp = it.nombre
+                            emailTemp = it.email
+                            mostrarDialogoEditar = true
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Editar Perfil",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            mensajeExito?.let { exito ->
+                if (exito.isNotBlank()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Text(
+                            text = exito,
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            mensajeError?.let { error ->
+                if (error.isNotBlank()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Text(
+                            text = error,
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            if (estaCargando) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AdminPanelSettings,
+                            contentDescription = "Administrador",
+                            modifier = Modifier.size(80.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            usuario?.nombre ?: "Administrador",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = "Email",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                usuario?.email ?: "email@ejemplo.com",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Security,
+                                    contentDescription = "Rol",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "ADMINISTRADOR",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            "Información de la Cuenta",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+
+                        InfoCuentaItem(
+                            titulo = "ID de Usuario",
+                            valor = usuario?.id?.take(12) ?: "N/A",
+                            icono = Icons.Default.Fingerprint,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        InfoCuentaItem(
+                            titulo = "Cuenta creada el",
+                            valor = fechaCreacionCuenta ?: "Fecha no disponible",
+                            icono = Icons.Default.CalendarToday,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        InfoCuentaItem(
+                            titulo = "Último acceso",
+                            valor = "Hoy, $horaActual",
+                            icono = Icons.Default.AccessTime,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            "Acciones de Administrador",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+
+                        Button(
+                            onClick = { viewModel.cargarDatosCompletos() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Recargar",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Recargar Datos del Sistema")
+                        }
+                    }
+                }
+            }
+        }
+
+        if (mostrarDialogoEditar) {
+            DialogoEditarPerfil(
+                nombre = nombreTemp,
+                email = emailTemp,
+                onNombreChange = { nombreTemp = it },
+                onEmailChange = { emailTemp = it },
+                onConfirmar = {
+                    viewModel.actualizarPerfilAdministrador(nombreTemp, emailTemp)
+                    mostrarDialogoEditar = false
+                },
+                onCancelar = {
+                    mostrarDialogoEditar = false
+                    viewModel.limpiarError()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun InfoCuentaItem(
+    titulo: String,
+    valor: String,
+    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icono,
+                contentDescription = titulo,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                titulo,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        Text(
+            valor,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DialogoEditarPerfil(
+    nombre: String,
+    email: String,
+    onNombreChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onConfirmar: () -> Unit,
+    onCancelar: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("Editar Perfil") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = onNombreChange,
+                    label = { Text("Nombre") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirmar) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+// Funciones de utilidad para formatear fechas y horas
+private fun obtenerFechaHoraCreacion(timestamp: Long?): String? {
+    return if (timestamp != null && timestamp > 0) {
+        try {
+            val date = Date(timestamp)
+            val dateFormat = SimpleDateFormat("d 'de' MMMM 'de' yyyy 'a las' hh:mm a", Locale("es", "ES"))
+            dateFormat.format(date)
+        } catch (e: Exception) {
+            "Fecha no disponible"
+        }
+    } else {
+        null
+    }
+}
+
+private fun obtenerHoraActualFormateada(): String {
+    return try {
+        val dateFormat = SimpleDateFormat("hh:mm a", Locale("es", "ES"))
+        dateFormat.format(Date())
+    } catch (e: Exception) {
+        "hora no disponible"
+    }
+}
+```
+# PantallaReportesAprobados.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelReportes
+import java.text.SimpleDateFormat
+import java.util.*
+/**
+ * Pantalla que muestra los reportes aprobados por el administrador
+ * Permite revisar y filtrar reportes ya validados
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param approvedReports Lista de reportes aprobados
+ * @param onReportClick Callback cuando se hace clic en un reporte
+ * @param onFilterChange Callback para cambiar filtros
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaReportesAprobados(
+    onNavegarAtras: () -> Unit,
+    onNavegarADetalleReporte: (String) -> Unit,
+    viewModel: ViewModelReportes = hiltViewModel()
+) {
+    // Implementación de la pantalla de reportes aprobados
+    // Incluiría: lista de reportes, filtros, estadísticas de aprobación
+    /**
+     * Componente de estadísticas de aprobación
+     *
+     * @param stats Estadísticas de reportes aprobados
+     */
+    val reportes by viewModel.reportes.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarReportes()
+    }
+
+    val reportesFiltrados = reportes.filter { reporte ->
+        reporte.estado == EstadoReporte.APROBADO
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Reportes Aprobados") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { paddingValores ->
+        if (estaCargando) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValores),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Cargando reportes...")
+                }
+            }
+        } else if (reportesFiltrados.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValores),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Verified,
+                        contentDescription = "Sin reportes",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "No hay reportes aprobados",
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        "Los reportes aprobados aparecerán aquí",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValores)
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        EstadisticaReporte(
+                            titulo = "Total Aprobados",
+                            valor = reportesFiltrados.size.toString(),
+                            color = Color(0xFF4CAF50)
+                        )
+                        EstadisticaReporte(
+                            titulo = "Este Mes",
+                            valor = reportesFiltrados.count { reporte ->
+                                esEsteMes(reporte.fechaCreacion)
+                            }.toString(),
+                            color = Color(0xFF2196F3)
+                        )
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = reportesFiltrados,
+                        key = { reporte -> reporte.id }
+                    ) { reporte ->
+                        TarjetaReporteAprobado(
+                            reporte = reporte,
+                            onClick = { onNavegarADetalleReporte(reporte.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EstadisticaReporte(
+    titulo: String,
+    valor: String,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            valor,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            titulo,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TarjetaReporteAprobado(
+    reporte: mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    reporte.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Aprobado",
+                        modifier = Modifier.size(16.dp),
+                        tint = Color(0xFF4CAF50)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "APROBADO",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                reporte.descripcion,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    // ✅ PARA ADMINISTRADOR: Mostrar nombre y email
+                    Text(
+                        "Por: ${reporte.usuarioNombre}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Email: ${reporte.usuarioEmail}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp
+                    )
+                }
+                Text(
+                    text = "Aprobado: ${obtenerTiempoTranscurrido(reporte.fechaCreacion)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        if (reporte.latitud != 0.0 && reporte.longitud != 0.0) {
+                            "Lat: ${"%.4f".format(reporte.latitud)}, Lng: ${"%.4f".format(reporte.longitud)}"
+                        } else {
+                            "Ubicación no especificada"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                    Text(
+                        "${reporte.meGustas.size} 👍 • ${reporte.comentarios.size} 💬",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Text(
+                    when (reporte.tipo) {
+                        TipoReporte.BACHE -> "Bache"
+                        TipoReporte.ALUMBRADO -> "Alumbrado"
+                        TipoReporte.BASURA -> "Basura"
+                        TipoReporte.AGUA -> "Agua"
+                        TipoReporte.OTRO -> "Otro"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+private fun obtenerTiempoTranscurrido(tiempoMillis: Long): String {
+    val diferencia = System.currentTimeMillis() - tiempoMillis
+    val minutos = diferencia / (1000 * 60)
+    val horas = minutos / 60
+    val dias = horas / 24
+
+    return when {
+        minutos < 1 -> "Hace un momento"
+        minutos < 60 -> "Hace $minutos min"
+        horas < 24 -> "Hace $horas h"
+        else -> "Hace $dias d"
+    }
+}
+
+private fun esEsteMes(tiempoMillis: Long): Boolean {
+    val calendarioReporte = Calendar.getInstance().apply {
+        timeInMillis = tiempoMillis
+    }
+    val calendarioActual = Calendar.getInstance()
+
+    return calendarioReporte.get(Calendar.YEAR) == calendarioActual.get(Calendar.YEAR) &&
+            calendarioReporte.get(Calendar.MONTH) == calendarioActual.get(Calendar.MONTH)
+}
+```
+# PantallaValidacionReportes.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas.administrador
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAdministrador
+import java.text.SimpleDateFormat
+import java.util.*
+
+/**
+ * Pantalla para validar reportes pendientes de aprobación
+ * Permite aprobar, rechazar o solicitar modificaciones a reportes
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja la validación de reportes
+ * @param onApproveReport Callback para aprobar un reporte
+ * @param onRejectReport Callback para rechazar un reporte
+ * @param onRequestChanges Callback para solicitar cambios
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaValidacionReportes(
+    onNavegarAtras: () -> Unit,
+    onNavegarADetalleReporte: (String) -> Unit,
+    viewModel: ViewModelAdministrador = hiltViewModel()
+) {
+    // Implementación de la pantalla de validación de reportes
+    // Incluiría: lista de reportes pendientes, detalles, acciones de validación
+    /**
+     * Componente de acciones de validación para un reporte
+     *
+     * @param reportId ID del reporte
+     * @param onApprove Callback para aprobar
+     * @param onReject Callback para rechazar
+     * @param onRequestChanges Callback para solicitar cambios
+     */
+    val reportesPendientes by viewModel.reportesPendientes.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+    val mensajeError by viewModel.mensajeError.collectAsState()
+    val mensajeExito by viewModel.mensajeExito.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.cargarReportesPendientes() }
+    LaunchedEffect(Unit) {
+        viewModel.limpiarError()
+        viewModel.limpiarMensajeExito()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Validar Reportes") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { paddingValores ->
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValores)) {
+            if (!mensajeExito.isNullOrEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50).copy(alpha = 0.1f))
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "✅ $mensajeExito", color = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
+                        IconButton(onClick = { viewModel.limpiarMensajeExito() }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color(0xFF2E7D32))
+                        }
+                    }
+                }
+            }
+
+            if (!mensajeError.isNullOrEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Red.copy(alpha = 0.1f))
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "❌ $mensajeError", color = Color.Red, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { viewModel.limpiarError() }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.Red)
+                        }
+                    }
+                }
+            }
+
+            if (estaCargando && reportesPendientes.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Cargando reportes...")
+                    }
+                }
+            } else if (reportesPendientes.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Check, contentDescription = "Sin reportes", modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("No hay reportes pendientes", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                        Text(
+                            "Todos los reportes han sido revisados y aprobados",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(reportesPendientes) { reporte ->
+                        TarjetaValidacionReporte(reporte, { onNavegarADetalleReporte(reporte.id) }, viewModel)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TarjetaValidacionReporte(
+    reporte: mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte,
+    onVerDetalles: () -> Unit,
+    viewModel: ViewModelAdministrador
+) {
+    var estaProcesandoAprobar by remember { mutableStateOf(false) }
+    var estaProcesandoRechazar by remember { mutableStateOf(false) }
+
+    if (estaProcesandoAprobar) {
+        LaunchedEffect(Unit) {
+            try { viewModel.aprobarReporte(reporte.id) } finally { estaProcesandoAprobar = false }
+        }
+    }
+
+    if (estaProcesandoRechazar) {
+        LaunchedEffect(Unit) {
+            try { viewModel.rechazarReporte(reporte.id) } finally { estaProcesandoRechazar = false }
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(reporte.titulo, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(
+                    text = when (reporte.tipo) {
+                        TipoReporte.BACHE -> "Bache"
+                        TipoReporte.ALUMBRADO -> "Alumbrado"
+                        TipoReporte.BASURA -> "Basura"
+                        TipoReporte.AGUA -> "Agua"
+                        TipoReporte.OTRO -> "Otro"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clip(RoundedCornerShape(4.dp))
+                        .background(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(reporte.descripcion, style = MaterialTheme.typography.bodyMedium, maxLines = 3)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ✅ PARA ADMINISTRADOR: Mostrar toda la información
+            Column {
+                InfoItem("Usuario:", reporte.usuarioNombre)
+                InfoItem("Email:", reporte.usuarioEmail)
+                InfoItem("ID Usuario:", reporte.usuarioId.take(8) + "...")
+                InfoItem(
+                    "Ubicación:",
+                    if (reporte.latitud != 0.0 && reporte.longitud != 0.0) {
+                        "Lat: ${"%.4f".format(reporte.latitud)}, Lng: ${"%.4f".format(reporte.longitud)}"
+                    } else { "No especificada" }
+                )
+                InfoItem("Fecha:", formatearFecha(reporte.fechaCreacion))
+                InfoItem("Gravedad:", reporte.gravedad)
+                InfoItem("Imágenes:", "${reporte.imagenUrls.size} imagen(es)")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = onVerDetalles,
+                    modifier = Modifier.weight(1f),
+                    enabled = !estaProcesandoAprobar && !estaProcesandoRechazar,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Visibility, contentDescription = "Ver detalles", modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Detalles")
+                    }
+                }
+
+                Button(
+                    onClick = { estaProcesandoRechazar = true },
+                    modifier = Modifier.weight(1f),
+                    enabled = !estaProcesandoAprobar && !estaProcesandoRechazar,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (estaProcesandoRechazar) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Close, contentDescription = "Rechazar", modifier = Modifier.size(16.dp))
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Rechazar")
+                    }
+                }
+
+                Button(
+                    onClick = { estaProcesandoAprobar = true },
+                    modifier = Modifier.weight(1f),
+                    enabled = !estaProcesandoAprobar && !estaProcesandoRechazar
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (estaProcesandoAprobar) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Check, contentDescription = "Aprobar", modifier = Modifier.size(16.dp))
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Aprobar")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoItem(etiqueta: String, valor: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(etiqueta, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(valor, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+    }
+}
+
+private fun formatearFecha(tiempoMillis: Long): String {
+    val fecha = Date(tiempoMillis)
+    val formateador = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    return formateador.format(fecha)
+}
+```
+# Visitante
+# MapaSeleccionUbicaion.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelSeleccionUbicacion
+
+/**
+ * Pantalla para seleccionar ubicación en un mapa interactivo
+ * Permite al usuario elegir una ubicación específica para reportes u otras funciones
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param initialLocation Ubicación inicial del mapa (opcional)
+ * @param onLocationSelected Callback cuando se selecciona una ubicación
+ * @param onCancel Callback para cancelar la selección
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaSeleccionUbicacionCompleta(
+    navController: NavController,
+    onUbicacionSeleccionada: (LatLng) -> Unit,
+    onCancelar: () -> Unit,
+    viewModel: ViewModelSeleccionUbicacion = hiltViewModel()
+) {
+    // Implementación del mapa para selección de ubicación
+    // Incluiría: mapa interactivo, marcador arrastrable, botones de acción
+    /**
+     * Componente del mapa interactivo para selección de ubicación
+     *
+     * @param currentLocation Ubicación actual del marcador
+     * @param onLocationChanged Callback cuando cambia la ubicación del marcador
+     */
+    val ubicacionSeleccionada by viewModel.ubicacionSeleccionada.collectAsState()
+    val ubicacionActual by viewModel.ubicacionActual.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val context = LocalContext.current
+
+    // ¡¡¡¡¡CAMBIÉ ESTO!!!!! Usar Dolores Hidalgo en lugar de Ciudad de México
+    val doloresHidalgo = LatLng(21.156100, -100.934200)
+
+    // Inicializar el ViewModel
+    LaunchedEffect(Unit) {
+        viewModel.inicializarUbicacion(context)
+    }
+
+    // Usar Dolores Hidalgo como ubicación predeterminada si no hay nada seleccionado
+    LaunchedEffect(Unit) {
+        if (ubicacionSeleccionada == null) {
+            viewModel.seleccionarUbicacion(doloresHidalgo)
+        }
+    }
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(
+            ubicacionSeleccionada ?: doloresHidalgo, // Usar Dolores Hidalgo si no hay selección
+            15f
+        )
+    }
+
+    // Variable para el marcador seleccionado - usar Dolores Hidalgo como predeterminado
+    var marcadorSeleccionado by remember {
+        mutableStateOf(ubicacionSeleccionada ?: doloresHidalgo)
+    }
+
+    // Actualizar marcador cuando cambia la ubicación seleccionada
+    LaunchedEffect(ubicacionSeleccionada) {
+        ubicacionSeleccionada?.let {
+            marcadorSeleccionado = it
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 15f)
+        }
+    }
+
+    // Mover cámara a ubicación actual cuando se obtiene
+    LaunchedEffect(ubicacionActual) {
+        ubicacionActual?.let { location ->
+            val nuevaUbicacion = LatLng(location.latitude, location.longitude)
+            marcadorSeleccionado = nuevaUbicacion
+            viewModel.seleccionarUbicacion(nuevaUbicacion)
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(nuevaUbicacion, 17f)
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Seleccionar Ubicación del Reporte") },
+                navigationIcon = {
+                    IconButton(onClick = onCancelar) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Cancelar")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            ubicacionSeleccionada?.let { onUbicacionSeleccionada(it) }
+                        },
+                        enabled = ubicacionSeleccionada != null
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = "Confirmar")
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Botón para usar ubicación actual del dispositivo
+                FloatingActionButton(
+                    onClick = { viewModel.obtenerUbicacionActual(context) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    if (estaCargando) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(Icons.Default.MyLocation, contentDescription = "Mi ubicación actual")
+                    }
+                }
+
+                // Botón para input manual
+                FloatingActionButton(
+                    onClick = {
+                        // Navegar a pantalla de input de coordenadas
+                        navController.navigate("input_coordenadas") {
+                            launchSingleTop = true
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Ingresar coordenadas manualmente")
+                }
+
+                // Botón para centrar en Dolores Hidalgo
+                FloatingActionButton(
+                    onClick = {
+                        marcadorSeleccionado = doloresHidalgo
+                        viewModel.seleccionarUbicacion(doloresHidalgo)
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(doloresHidalgo, 15f)
+                    },
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Icon(Icons.Default.Home, contentDescription = "Centrar en Dolores Hidalgo")
+                }
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                onMapClick = { nuevaUbicacion ->
+                    // Cuando el usuario toca el mapa, guardar esa ubicación
+                    marcadorSeleccionado = nuevaUbicacion
+                    viewModel.seleccionarUbicacion(nuevaUbicacion)
+                },
+                properties = MapProperties(
+                    mapType = MapType.NORMAL,
+                    isMyLocationEnabled = true // Mostrar ubicación del dispositivo
+                ),
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = true,
+                    compassEnabled = true,
+                    mapToolbarEnabled = true,
+                    myLocationButtonEnabled = true
+                )
+            ) {
+                // Marcador de ubicación seleccionada
+                Marker(
+                    state = MarkerState(position = marcadorSeleccionado),
+                    title = "Ubicación del reporte",
+                    snippet = "Lat: ${"%.6f".format(marcadorSeleccionado.latitude)}, Lng: ${"%.6f".format(marcadorSeleccionado.longitude)}",
+                    draggable = true // Permitir arrastrar el marcador
+                )
+
+                // Marcador de Dolores Hidalgo (referencia)
+                Marker(
+                    state = MarkerState(position = doloresHidalgo),
+                    title = "Dolores Hidalgo, Gto.",
+                    snippet = "Cuna de la Independencia Nacional",
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)
+                )
+            }
+
+            // Panel inferior con información de ubicación
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Ubicación seleccionada:",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Latitud: ${"%.6f".format(marcadorSeleccionado.latitude)}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "Longitud: ${"%.6f".format(marcadorSeleccionado.longitude)}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Instrucciones:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "• Toca el mapa para seleccionar ubicación",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "• Arrastra el marcador rojo para ajustar",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "• Botón azul: tu ubicación actual",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "• Botón morado: centrar en Dolores Hidalgo",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            // Mostrar errores
+            error?.let { mensajeError ->
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = mensajeError,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { viewModel.limpiarError() }
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Cerrar",
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+# MisReportes
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.presentacion.componentes.TarjetaReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelMisReportes
+
+/**
+ * Pantalla que muestra los reportes creados por el usuario actual
+ * Permite ver, filtrar y gestionar los propios reportes
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja los reportes del usuario
+ * @param onReportClick Callback cuando se hace clic en un reporte
+ * @param onCreateReport Callback para crear un nuevo reporte
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaMisReportes(
+    onNavegarAtras: () -> Unit,
+    onNavegarACrearReporte: () -> Unit,
+    onNavegarADetalleReporte: (String) -> Unit,
+    onNavegarAEditarReporte: (String) -> Unit,
+    viewModel: ViewModelMisReportes = hiltViewModel()
+) {
+    // Implementación de la pantalla "Mis Reportes"
+    // Incluiría: lista de reportes propios, filtros por estado, estadísticas persona
+
+
+    /**
+     * Componente de filtros para reportes del usuario
+     *
+     * @param currentFilter Filtro actual aplicado
+     * @param onFilterChange Callback cuando cambia el filtro
+     */
+    val misReportes by viewModel.misReportes.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.cargarMisReportes() }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("Mis Reportes ${if (misReportes.isNotEmpty()) "(${misReportes.size})" else ""}")
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.recargarReportes() }, enabled = !estaCargando) {
+                        if (estaCargando) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Recargar")
+                        }
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onNavegarACrearReporte) {
+                Icon(Icons.Default.Add, contentDescription = "Nuevo Reporte")
+            }
+        }
+    ) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            error?.let { mensajeError ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Warning, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Error", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = mensajeError, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.fillMaxWidth())
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                            TextButton(onClick = { viewModel.limpiarError() }) { Text("Cerrar") }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(onClick = { viewModel.recargarReportes() }) { Text("Reintentar") }
+                        }
+                    }
+                }
+            }
+
+            when {
+                estaCargando -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            CircularProgressIndicator()
+                            Text("Cargando mis reportes...")
+                            Text("Buscando reportes para el usuario...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                misReportes.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Icon(Icons.Default.Person, contentDescription = "Sin reportes", modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("No has creado reportes aún", style = MaterialTheme.typography.titleMedium)
+                            Text("Presiona el botón + para crear tu primer reporte", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Button(onClick = onNavegarACrearReporte) { Text("Crear Primer Reporte") }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("O presiona el botón ↻ para recargar", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                else -> {
+                    val reportesPendientes = misReportes.count { it.estado == mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte.PENDIENTE }
+                    val reportesAprobados = misReportes.count { it.estado == mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte.APROBADO }
+                    val reportesRechazados = misReportes.count { it.estado == mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte.RECHAZADO }
+                    val reportesResueltos = misReportes.count { it.estado == mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte.RESUELTO }
+
+                    Column {
+                        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Resumen de mis reportes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    InfoChip("Total", misReportes.size.toString())
+                                    InfoChip("Pendientes", reportesPendientes.toString())
+                                    InfoChip("Aprobados", reportesAprobados.toString())
+                                    InfoChip("Resueltos", reportesResueltos.toString())
+                                }
+                                if (reportesRechazados > 0) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    InfoChip("Rechazados", reportesRechazados.toString(), isError = true)
+                                }
+                            }
+                        }
+
+                        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(misReportes, key = { it.id }) { reporte ->
+                                TarjetaReporte(
+                                    reporte = reporte,
+                                    onClic = { onNavegarADetalleReporte(reporte.id) },
+                                    onMeGusta = { viewModel.alternarMeGusta(reporte.id) },
+                                    onComentar = { onNavegarADetalleReporte(reporte.id) },
+                                    estaLiked = reporte.meGustas.contains(viewModel.obtenerUsuarioActualId()),
+                                    puedeEditar = reporte.usuarioId == viewModel.obtenerUsuarioActualId(),
+                                    onEditar = { onNavegarAEditarReporte(reporte.id) },
+                                    onEliminar = { viewModel.eliminarReporte(reporte.id) },
+                                    usuarioActualId = viewModel.obtenerUsuarioActualId()
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoChip(texto: String, valor: String, isError: Boolean = false) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(texto, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(valor, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+    }
+}
+```
+# PantallaBienvenida
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.presentacion.componentes.TarjetaReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelMisReportes
+
+
+/**
+ * Pantalla de bienvenida que se muestra al abrir la aplicación por primera vez
+ * Presenta información sobre la aplicación y opciones para continuar
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param onNavigateToLogin Callback para navegar al login
+ * @param onNavigateToRegister Callback para navegar al registro
+ * @param onContinueAsGuest Callback para continuar como invitado
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaMisReportes(
+    onNavegarAtras: () -> Unit,
+    onNavegarACrearReporte: () -> Unit,
+    onNavegarADetalleReporte: (String) -> Unit,
+    onNavegarAEditarReporte: (String) -> Unit,
+    viewModel: ViewModelMisReportes = hiltViewModel()
+) {
+    // Implementación de la pantalla "Mis Reportes"
+    // Incluiría: lista de reportes propios, filtros por estado, estadísticas persona
+
+
+    /**
+     * Componente de filtros para reportes del usuario
+     *
+     * @param currentFilter Filtro actual aplicado
+     * @param onFilterChange Callback cuando cambia el filtro
+     */
+    val misReportes by viewModel.misReportes.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.cargarMisReportes() }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("Mis Reportes ${if (misReportes.isNotEmpty()) "(${misReportes.size})" else ""}")
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.recargarReportes() }, enabled = !estaCargando) {
+                        if (estaCargando) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Recargar")
+                        }
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onNavegarACrearReporte) {
+                Icon(Icons.Default.Add, contentDescription = "Nuevo Reporte")
+            }
+        }
+    ) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            error?.let { mensajeError ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Warning, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Error", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = mensajeError, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.fillMaxWidth())
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                            TextButton(onClick = { viewModel.limpiarError() }) { Text("Cerrar") }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(onClick = { viewModel.recargarReportes() }) { Text("Reintentar") }
+                        }
+                    }
+                }
+            }
+
+            when {
+                estaCargando -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            CircularProgressIndicator()
+                            Text("Cargando mis reportes...")
+                            Text("Buscando reportes para el usuario...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                misReportes.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Icon(Icons.Default.Person, contentDescription = "Sin reportes", modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("No has creado reportes aún", style = MaterialTheme.typography.titleMedium)
+                            Text("Presiona el botón + para crear tu primer reporte", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Button(onClick = onNavegarACrearReporte) { Text("Crear Primer Reporte") }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("O presiona el botón ↻ para recargar", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                else -> {
+                    val reportesPendientes = misReportes.count { it.estado == mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte.PENDIENTE }
+                    val reportesAprobados = misReportes.count { it.estado == mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte.APROBADO }
+                    val reportesRechazados = misReportes.count { it.estado == mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte.RECHAZADO }
+                    val reportesResueltos = misReportes.count { it.estado == mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte.RESUELTO }
+
+                    Column {
+                        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Resumen de mis reportes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    InfoChip("Total", misReportes.size.toString())
+                                    InfoChip("Pendientes", reportesPendientes.toString())
+                                    InfoChip("Aprobados", reportesAprobados.toString())
+                                    InfoChip("Resueltos", reportesResueltos.toString())
+                                }
+                                if (reportesRechazados > 0) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    InfoChip("Rechazados", reportesRechazados.toString(), isError = true)
+                                }
+                            }
+                        }
+
+                        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(misReportes, key = { it.id }) { reporte ->
+                                TarjetaReporte(
+                                    reporte = reporte,
+                                    onClic = { onNavegarADetalleReporte(reporte.id) },
+                                    onMeGusta = { viewModel.alternarMeGusta(reporte.id) },
+                                    onComentar = { onNavegarADetalleReporte(reporte.id) },
+                                    estaLiked = reporte.meGustas.contains(viewModel.obtenerUsuarioActualId()),
+                                    puedeEditar = reporte.usuarioId == viewModel.obtenerUsuarioActualId(),
+                                    onEditar = { onNavegarAEditarReporte(reporte.id) },
+                                    onEliminar = { viewModel.eliminarReporte(reporte.id) },
+                                    usuarioActualId = viewModel.obtenerUsuarioActualId()
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoChip(texto: String, valor: String, isError: Boolean = false) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(texto, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(valor, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+    }
+}
+```
+# PantallaCrearReportes
+```package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.google.android.gms.maps.model.LatLng
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelCrearReporte
+
+/**
+ * Pantalla para crear nuevos reportes de incidencias
+ * Permite al usuario reportar problemas con detalles y ubicación
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja la creación de reportes
+ * @param onReportCreated Callback cuando se crea exitosamente un reporte
+ * @param onCancel Callback para cancelar la creación
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaCrearReporte(
+    navController: NavController,
+    onReporteCreado: () -> Unit,
+    onNavegarAtras: () -> Unit,
+    viewModel: ViewModelCrearReporte = hiltViewModel()
+) {
+    // Implementación de la pantalla de creación de reportes
+    // Incluiría: formulario, selector de ubicación, adjuntar fotos, categorías
+    /**
+     * Componente del formulario de creación de reporte
+     *
+     * @param onTitleChange Callback cuando cambia el título
+     * @param onDescriptionChange Callback cuando cambia la descripción
+     * @param onCategoryChange Callback cuando cambia la categoría
+     * @param onPriorityChange Callback cuando cambia la prioridad
+     */
+    val contexto = LocalContext.current
+    val estadoUI by viewModel.estadoUI.collectAsStateWithLifecycle()
+    val ubicacion by viewModel.ubicacionActual.collectAsStateWithLifecycle()
+    val estaObteniendoUbicacion by viewModel.estaObteniendoUbicacion.collectAsStateWithLifecycle()
+    val errorUbicacion by viewModel.errorUbicacion.collectAsStateWithLifecycle()
+
+    // Estados locales para la selección de ubicación
+    var mostrarSelectorUbicacion by remember { mutableStateOf(false) }
+    var ubicacionReporte by remember { mutableStateOf<LatLng?>(null) }
+
+    // Si hay ubicación actual, usarla como predeterminada
+    LaunchedEffect(ubicacion) {
+        ubicacion?.let { location ->
+            if (ubicacionReporte == null) {
+                ubicacionReporte = LatLng(location.latitude, location.longitude)
+            }
+        }
+    }
+
+    val seleccionarImagenLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { viewModel.agregarImagen(it) }
+    }
+
+    LaunchedEffect(estadoUI) {
+        if (estadoUI is ViewModelCrearReporte.EstadoUI.Exito) {
+            onReporteCreado()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Crear Reporte") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    if (viewModel.tieneDatos()) {
+                        IconButton(onClick = { viewModel.limpiarFormulario() }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Limpiar formulario")
+                        }
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    // Pasar la ubicación seleccionada al ViewModel
+                    ubicacionReporte?.let { latLng ->
+                        viewModel.establecerUbicacion(latLng.latitude, latLng.longitude)
+                    }
+                    viewModel.crearReporte()
+                },
+                icon = { Icon(Icons.Default.Send, contentDescription = "Enviar reporte") },
+                text = { Text("Enviar Reporte") },
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Título del reporte
+            OutlinedTextField(
+                value = viewModel.titulo,
+                onValueChange = { viewModel.actualizarTitulo(it) },
+                label = { Text("Título del reporte *") },
+                placeholder = { Text("Ej: Bache grande en avenida principal") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = viewModel.mostrarError && viewModel.titulo.isBlank(),
+                supportingText = {
+                    if (viewModel.mostrarError && viewModel.titulo.isBlank()) Text("El título es requerido")
+                    else Text("${viewModel.titulo.length}/100")
+                },
+                trailingIcon = {
+                    if (viewModel.titulo.isNotBlank()) {
+                        IconButton(onClick = { viewModel.actualizarTitulo("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+                        }
+                    }
+                }
+            )
+
+            // Descripción
+            OutlinedTextField(
+                value = viewModel.descripcion,
+                onValueChange = { viewModel.actualizarDescripcion(it) },
+                label = { Text("Descripción detallada *") },
+                placeholder = { Text("Describe el problema con detalle...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                singleLine = false,
+                maxLines = 5,
+                isError = viewModel.mostrarError && viewModel.descripcion.isBlank(),
+                supportingText = {
+                    if (viewModel.mostrarError && viewModel.descripcion.isBlank()) Text("La descripción es requerida")
+                    else Text("${viewModel.descripcion.length}/500")
+                }
+            )
+
+            // Tipo de problema
+            Text("Tipo de problema:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TipoReporte.entries.forEach { tipo ->
+                    TipoReporteItem(
+                        tipo = tipo,
+                        seleccionado = viewModel.tipoSeleccionado == tipo,
+                        onSeleccionar = { viewModel.actualizarTipo(tipo) }
+                    )
+                }
+            }
+
+            // Nivel de gravedad
+            Text("Nivel de gravedad:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("Baja", "Media", "Alta", "Urgente").forEach { gravedad ->
+                    GravedadChip(
+                        texto = gravedad,
+                        seleccionado = viewModel.gravedadSeleccionada == gravedad,
+                        onClick = { viewModel.actualizarGravedad(gravedad) }
+                    )
+                }
+            }
+
+            // SELECCIÓN DE UBICACIÓN (SEGMENTO CORREGIDO)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        mostrarSelectorUbicacion = true
+                    },
+                colors = CardDefaults.cardColors(
+                    containerColor = if (ubicacionReporte != null) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = "Ubicación",
+                            tint = if (ubicacionReporte != null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Ubicación del Reporte *",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (ubicacionReporte != null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    if (ubicacionReporte != null) {
+                        Text(
+                            "Ubicación establecida:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Lat: ${"%.6f".format(ubicacionReporte?.latitude)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            "Lng: ${"%.6f".format(ubicacionReporte?.longitude)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Toque para cambiar la ubicación",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Text(
+                            "Presione para seleccionar ubicación en el mapa",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Botones para selección de ubicación (alternativos)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.obtenerUbicacionActual() },
+                    modifier = Modifier.weight(1f),
+                    enabled = !estaObteniendoUbicacion
+                ) {
+                    if (estaObteniendoUbicacion) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Obteniendo...")
+                    } else {
+                        Icon(
+                            Icons.Default.MyLocation,
+                            contentDescription = "Ubicación actual",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Actual")
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        mostrarSelectorUbicacion = true
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.Map,
+                        contentDescription = "Seleccionar en mapa",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Mapa")
+                }
+
+                Button(
+                    onClick = {
+                        navController.navigate("input_coordenadas") {
+                            launchSingleTop = true
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Ingresar coordenadas",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Manual")
+                }
+            }
+
+            errorUbicacion?.let { error ->
+                Text(
+                    error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            // Imágenes
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Imágenes (opcional)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Puedes agregar hasta 5 imágenes. ${viewModel.imagenes.size}/5",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+
+                    if (viewModel.imagenes.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No hay imágenes seleccionadas",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            itemsIndexed(
+                                viewModel.imagenes,
+                                key = { index, imagen -> "$index-${imagen.hashCode()}" }
+                            ) { index, imagenUri ->
+                                Box(modifier = Modifier.size(100.dp)) {
+                                    AsyncImage(
+                                        model = imagenUri,
+                                        contentDescription = "Imagen del reporte",
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .clip(MaterialTheme.shapes.medium),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    IconButton(
+                                        onClick = { viewModel.eliminarImagen(index) },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Eliminar imagen",
+                                            tint = Color.White
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                seleccionarImagenLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = viewModel.imagenes.size < 5
+                        ) {
+                            Icon(Icons.Default.Photo, contentDescription = "Seleccionar imagen")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Agregar Imagen")
+                        }
+
+                        if (viewModel.imagenes.isNotEmpty()) {
+                            OutlinedButton(
+                                onClick = { viewModel.limpiarImagenes() },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Limpiar imágenes")
+                                Spacer(Modifier.width(8.dp))
+                                Text("Limpiar")
+                            }
+                        }
+                    }
+
+                    if (viewModel.imagenes.size >= 5) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Límite de 5 imágenes alcanzado",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
+            // Mostrar errores generales
+            if (viewModel.mostrarError) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            viewModel.mensajeError,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = {
+                                viewModel.mostrarError = false
+                                viewModel.mensajeError = ""
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Cerrar",
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Estado de carga
+            if (estadoUI is ViewModelCrearReporte.EstadoUI.Cargando) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(Modifier.height(8.dp))
+                        Text("Creando reporte...")
+                    }
+                }
+            }
+
+            // Estado de éxito
+            if (estadoUI is ViewModelCrearReporte.EstadoUI.Exito) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "Éxito",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "¡Reporte creado exitosamente!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(80.dp))
+        }
+    }
+
+    // Pantalla de selección de ubicación (si se necesita mostrar)
+    if (mostrarSelectorUbicacion) {
+        PantallaSeleccionUbicacionCompleta(
+            navController = navController,
+            onUbicacionSeleccionada = { latLng ->
+                ubicacionReporte = latLng
+                mostrarSelectorUbicacion = false
+            },
+            onCancelar = {
+                mostrarSelectorUbicacion = false
+            }
+        )
+    }
+}
+
+@Composable
+fun TipoReporteItem(tipo: TipoReporte, seleccionado: Boolean, onSeleccionar: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = seleccionado, onClick = onSeleccionar)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = seleccionado, onClick = null)
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                text = when (tipo) {
+                    TipoReporte.BACHE -> "Bache"
+                    TipoReporte.ALUMBRADO -> "Alumbrado público"
+                    TipoReporte.BASURA -> "Basura acumulada"
+                    TipoReporte.AGUA -> "Problema de agua"
+                    TipoReporte.OTRO -> "Otro"
+                },
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = when (tipo) {
+                    TipoReporte.BACHE -> "Huecos o daños en el pavimento"
+                    TipoReporte.ALUMBRADO -> "Lámparas quemadas o dañadas"
+                    TipoReporte.BASURA -> "Basura en vía pública"
+                    TipoReporte.AGUA -> "Fugas o falta de agua"
+                    TipoReporte.OTRO -> "Otro tipo de problema"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GravedadChip(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
+    val colors = when (texto) {
+        "Baja" -> Color(0xFF4CAF50) to Color(0xFFE8F5E8)
+        "Media" -> Color(0xFF2196F3) to Color(0xFFE3F2FD)
+        "Alta" -> Color(0xFFFF9800) to Color(0xFFFFF3E0)
+        else -> Color(0xFFF44336) to Color(0xFFFFEBEE)
+    }
+    FilterChip(
+        selected = seleccionado,
+        onClick = onClick,
+        label = { Text(text = texto) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedLabelColor = colors.first,
+            selectedContainerColor = colors.second
+        )
+    )
+}
+```
+# PantallaDetalleResporte.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Comentario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAutenticacion
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelComentarios
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelDetalleReporte
+import java.text.SimpleDateFormat
+import java.util.*
+/**
+ * Pantalla que muestra los detalles completos de un reporte específico
+ * Incluye información, comentarios, estado y actualizaciones
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param reportId ID del reporte a mostrar
+ * @param viewModel ViewModel que maneja los detalles del reporte
+ * @param onBack Callback para regresar a la pantalla anterior
+ * @param onEditReport Callback para editar el reporte (si es posible)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaDetalleReporte(
+    reporteId: String,
+    onNavegarAtras: () -> Unit,
+    onNavegarAEditarReporte: (String) -> Unit = {},
+    viewModel: ViewModelDetalleReporte = hiltViewModel(),
+    viewModelComentarios: ViewModelComentarios = hiltViewModel(),
+    viewModelAutenticacion: ViewModelAutenticacion = hiltViewModel()
+) {
+    // Implementación de la pantalla de detalle de reporte
+    // Incluiría: información del reporte, comentarios, historial de estado
+    /**
+     * Componente de información principal del reporte
+     *
+     * @param report Datos del reporte a mostrar
+     */
+    val estadoUI by viewModel.estadoUI.collectAsStateWithLifecycle()
+    val cantidadComentarios by viewModel.cantidadComentarios.collectAsStateWithLifecycle()
+
+    val comentarios by viewModelComentarios.comentarios.collectAsStateWithLifecycle()
+    val estadoUIComentarios by viewModelComentarios.estadoUI.collectAsStateWithLifecycle()
+    val mensajeErrorComentarios by viewModelComentarios.mensajeError.collectAsStateWithLifecycle()
+
+    val usuarioActual by viewModelAutenticacion.usuarioActual.collectAsStateWithLifecycle()
+    val usuarioId = usuarioActual?.id ?: ""
+    val esAdmin = usuarioActual?.rol == RolUsuario.ADMINISTRADOR
+
+    var reporteCargado by remember { mutableStateOf<mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte?>(null) }
+    var puedeEditarReporte by remember { mutableStateOf(false) }
+
+    LaunchedEffect(reporteId) {
+        viewModel.cargarReporte(reporteId)
+        viewModelComentarios.cargarComentarios(reporteId)
+    }
+    /**
+     * Componente de sección de comentarios del reporte
+     *
+     * @param comments Lista de comentarios
+     * @param onAddComment Callback para agregar un comentario
+     */
+    LaunchedEffect(estadoUI) {
+        if (estadoUI is ViewModelDetalleReporte.EstadoUI.Exito) {
+            val reporte = (estadoUI as ViewModelDetalleReporte.EstadoUI.Exito).reporte
+            reporteCargado = reporte
+            puedeEditarReporte = reporte.usuarioId == usuarioId || esAdmin
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Detalle del Reporte") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    if (puedeEditarReporte) {
+                        IconButton(
+                            onClick = { onNavegarAEditarReporte(reporteId) }
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar Reporte")
+                        }
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        when (estadoUI) {
+            is ViewModelDetalleReporte.EstadoUI.Cargando -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text("Cargando reporte...")
+                    }
+                }
+            }
+            is ViewModelDetalleReporte.EstadoUI.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = "Error",
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = (estadoUI as ViewModelDetalleReporte.EstadoUI.Error).mensaje,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Button(onClick = { viewModel.cargarReporte(reporteId) }) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+            }
+            is ViewModelDetalleReporte.EstadoUI.Exito -> {
+                val reporte = (estadoUI as ViewModelDetalleReporte.EstadoUI.Exito).reporte
+                ContenidoDetalleReporteCompleto(
+                    reporte = reporte,
+                    comentarios = comentarios,
+                    cantidadComentarios = cantidadComentarios,
+                    estadoUIComentarios = estadoUIComentarios,
+                    mensajeErrorComentarios = mensajeErrorComentarios,
+                    onAgregarComentario = { texto ->
+                        viewModelComentarios.agregarComentario(reporteId, texto)
+                    },
+                    onEliminarComentario = { comentarioId, comentarioUsuarioId ->
+                        viewModelComentarios.eliminarComentario(
+                            reporteId,
+                            comentarioId,
+                            usuarioId,
+                            esAdmin
+                        )
+                    },
+                    onLimpiarError = {
+                        viewModelComentarios.limpiarError()
+                    },
+                    usuarioActualId = usuarioId,
+                    esUsuarioAdmin = esAdmin,
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize()
+                )
+            }
+            else -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContenidoDetalleReporteCompleto(
+    reporte: mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte,
+    comentarios: List<Comentario>,
+    cantidadComentarios: Int,
+    estadoUIComentarios: ViewModelComentarios.EstadoUI,
+    mensajeErrorComentarios: String?,
+    onAgregarComentario: (String) -> Unit,
+    onEliminarComentario: (String, String) -> Unit,
+    onLimpiarError: () -> Unit,
+    usuarioActualId: String,
+    esUsuarioAdmin: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Sección de información del reporte
+        ContenidoDetalleReporteBasico(
+            reporte = reporte,
+            cantidadComentarios = cantidadComentarios,
+            esUsuarioAdmin = esUsuarioAdmin
+        )
+
+        // Sección de comentarios
+        SeccionComentarios(
+            comentarios = comentarios,
+            cantidadComentarios = cantidadComentarios,
+            estadoUI = estadoUIComentarios,
+            mensajeError = mensajeErrorComentarios,
+            onAgregarComentario = onAgregarComentario,
+            onEliminarComentario = onEliminarComentario,
+            onLimpiarError = onLimpiarError,
+            usuarioActualId = usuarioActualId,
+            esUsuarioAdmin = esUsuarioAdmin,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(80.dp))
+    }
+}
+
+@Composable
+fun ContenidoDetalleReporteBasico(
+    reporte: mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte,
+    cantidadComentarios: Int,
+    esUsuarioAdmin: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Encabezado con título y estado
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = reporte.titulo,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    BadgeEstado(estado = reporte.estado)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                // Contador de interacciones
+                Row {
+                    Text(
+                        text = "${reporte.meGustas.size} 👍 • $cantidadComentarios 💬",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Descripción",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = reporte.descripcion,
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 20.sp
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Información del Reporte",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                InfoItem(
+                    icono = Icons.Default.Category,
+                    titulo = "Tipo de problema",
+                    valor = when (reporte.tipo) {
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.BACHE -> "Bache"
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.ALUMBRADO -> "Alumbrado público"
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.BASURA -> "Basura acumulada"
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.AGUA -> "Problema de agua"
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.OTRO -> "Otro"
+                    }
+                )
+                InfoItem(
+                    icono = Icons.Default.Warning,
+                    titulo = "Gravedad",
+                    valor = reporte.gravedad
+                )
+                InfoItem(
+                    icono = Icons.Default.DateRange,
+                    titulo = "Fecha de reporte",
+                    valor = formatearFecha(reporte.fechaCreacion)
+                )
+                InfoItem(
+                    icono = Icons.Default.LocationOn,
+                    titulo = "Ubicación",
+                    valor = "Lat: ${"%.6f".format(reporte.latitud)}, Lng: ${"%.6f".format(reporte.longitud)}"
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Reportado por",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (esUsuarioAdmin) {
+                    // ✅ PARA ADMINISTRADOR: Mostrar nombre, email e ID
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = reporte.usuarioNombre.ifBlank { "Usuario anónimo" },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = reporte.usuarioEmail.ifBlank { "Sin email" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "ID: ${reporte.usuarioId.take(8)}...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                    }
+                } else {
+                    // ✅ PARA USUARIO NORMAL: Mostrar solo el nombre
+                    Text(
+                        text = reporte.usuarioNombre.ifBlank { "Usuario anónimo" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        if (reporte.imagenUrls.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Imágenes del reporte (${reporte.imagenUrls.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(reporte.imagenUrls) { imagenUrl ->
+                            Card(
+                                modifier = Modifier
+                                    .size(220.dp)
+                                    .clip(MaterialTheme.shapes.medium),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                            ) {
+                                AsyncImage(
+                                    model = imagenUrl,
+                                    contentDescription = "Imagen del reporte",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SeccionComentarios(
+    comentarios: List<Comentario>,
+    cantidadComentarios: Int,
+    estadoUI: ViewModelComentarios.EstadoUI,
+    mensajeError: String?,
+    onAgregarComentario: (String) -> Unit,
+    onEliminarComentario: (String, String) -> Unit,
+    onLimpiarError: () -> Unit,
+    usuarioActualId: String,
+    esUsuarioAdmin: Boolean,
+    modifier: Modifier = Modifier
+) {
+    var textoComentario by remember { mutableStateOf("") }
+    var estaEnviando by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Comentarios ($cantidadComentarios)",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Input para nuevo comentario
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = textoComentario,
+                    onValueChange = { textoComentario = it },
+                    label = { Text("Escribe un comentario...") },
+                    placeholder = { Text("Comparte tu opinión o información adicional...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    maxLines = 4,
+                    singleLine = false,
+                    shape = MaterialTheme.shapes.medium,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        if (textoComentario.isNotBlank()) {
+                            estaEnviando = true
+                            onAgregarComentario(textoComentario)
+                            textoComentario = ""
+                            estaEnviando = false
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    enabled = textoComentario.isNotBlank() && !estaEnviando
+                ) {
+                    if (estaEnviando) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Enviando...")
+                    } else {
+                        Icon(
+                            Icons.Default.Send,
+                            contentDescription = "Enviar comentario",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Enviar Comentario")
+                    }
+                }
+            }
+        }
+
+        // Mostrar errores
+        mensajeError?.let { error ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = onLimpiarError
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Cerrar",
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+        }
+
+        // Lista de comentarios
+        when {
+            estadoUI is ViewModelComentarios.EstadoUI.Cargando && comentarios.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            "Cargando comentarios...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            comentarios.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Comment,
+                            contentDescription = "Sin comentarios",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Text(
+                            text = "No hay comentarios aún",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Sé el primero en comentar",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            else -> {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    comentarios.forEach { comentario ->
+                        TarjetaComentario(
+                            comentario = comentario,
+                            usuarioActualId = usuarioActualId,
+                            esUsuarioAdmin = esUsuarioAdmin,
+                            onEliminarComentario = onEliminarComentario
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TarjetaComentario(
+    comentario: Comentario,
+    usuarioActualId: String,
+    esUsuarioAdmin: Boolean,
+    onEliminarComentario: (String, String) -> Unit
+) {
+    var mostrarDialogoEliminar by remember { mutableStateOf(false) }
+
+    val puedeEliminar = comentario.usuarioId == usuarioActualId || esUsuarioAdmin
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = comentario.texto,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Por: ${comentario.usuarioNombre}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = formatearFechaComentario(comentario.fecha),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (comentario.editado) {
+                        Text(
+                            text = "• editado",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (puedeEliminar) {
+                    IconButton(
+                        onClick = { mostrarDialogoEliminar = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Eliminar comentario",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (mostrarDialogoEliminar) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoEliminar = false },
+            title = { Text("Eliminar comentario") },
+            text = {
+                Text(
+                    if (esUsuarioAdmin && comentario.usuarioId != usuarioActualId) {
+                        "¿Estás seguro de que quieres eliminar este comentario como administrador?"
+                    } else {
+                        "¿Estás seguro de que quieres eliminar tu comentario?"
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onEliminarComentario(comentario.id, comentario.usuarioId)
+                        mostrarDialogoEliminar = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { mostrarDialogoEliminar = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BadgeEstado(estado: EstadoReporte) {
+    val (color, texto) = when (estado) {
+        EstadoReporte.PENDIENTE -> Color(0xFFFFA000) to "Pendiente"
+        EstadoReporte.APROBADO -> Color(0xFF4CAF50) to "Aprobado"
+        EstadoReporte.RECHAZADO -> Color(0xFFF44336) to "Rechazado"
+        EstadoReporte.RESUELTO -> Color(0xFF2196F3) to "Resuelto"
+    }
+
+    Badge(
+        containerColor = color,
+        contentColor = Color.White
+    ) {
+        Text(text = texto)
+    }
+}
+
+@Composable
+fun InfoItem(
+    icono: ImageVector,
+    titulo: String,
+    valor: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icono,
+            contentDescription = titulo,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = titulo,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = valor,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+private fun formatearFecha(tiempoMillis: Long): String {
+    val fecha = Date(tiempoMillis)
+    val formateador = SimpleDateFormat("dd/MM/yyyy 'a las' HH:mm", Locale.getDefault())
+    return formateador.format(fecha)
+}
+
+private fun formatearFechaComentario(tiempoMillis: Long): String {
+    val fecha = Date(tiempoMillis)
+    val formateador = SimpleDateFormat("dd/MM/yy 'a las' HH:mm", Locale.getDefault())
+    return formateador.format(fecha)
+}
+```
+# PantallaEditarReportes
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelEditarReporte
+/**
+ * Pantalla para editar un reporte existente creado por el usuario
+ * Permite modificar los detalles de un reporte previamente creado
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param reportId ID del reporte a editar
+ * @param viewModel ViewModel que maneja la edición de reportes
+ * @param onUpdateSuccess Callback cuando la actualización es exitosa
+ * @param onCancel Callback para cancelar la edición
+ */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaEditarReporte(
+    reporteId: String,
+    onNavegarAtras: () -> Unit,
+    onEdicionCompletada: () -> Unit,
+    viewModel: ViewModelEditarReporte = hiltViewModel()
+) {
+    /**
+     * Componente de validación de edición
+     *
+     * @param canEdit Indica si el reporte puede ser editado
+     * @param editReasons Razones por las que se puede/no se puede editar
+     */
+    val reporte by viewModel.reporte.collectAsStateWithLifecycle()
+    val estaCargando by viewModel.estaCargando.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
+    val edicionExitosa by viewModel.edicionExitosa.collectAsStateWithLifecycle()
+
+    var titulo by remember { mutableStateOf("") }
+    var descripcion by remember { mutableStateOf("") }
+    var tipoSeleccionado by remember { mutableStateOf(mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.OTRO) }
+    var gravedadSeleccionada by remember { mutableStateOf("Media") }
+
+    LaunchedEffect(reporteId) { viewModel.cargarReporte(reporteId) }
+
+    LaunchedEffect(reporte) {
+        reporte?.let {
+            titulo = it.titulo
+            descripcion = it.descripcion
+            tipoSeleccionado = it.tipo
+            gravedadSeleccionada = it.gravedad
+        }
+    }
+
+    LaunchedEffect(edicionExitosa) {
+        if (edicionExitosa) onEdicionCompletada()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Editar Reporte") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    if (reporte != null) {
+                        IconButton(
+                            onClick = {
+                                viewModel.editarReporte(
+                                    reporteId = reporteId,
+                                    titulo = titulo,
+                                    descripcion = descripcion,
+                                    tipo = tipoSeleccionado,
+                                    gravedad = gravedadSeleccionada,
+                                    latitud = reporte!!.latitud,
+                                    longitud = reporte!!.longitud
+                                )
+                            },
+                            enabled = !estaCargando && titulo.isNotBlank() && descripcion.isNotBlank()
+                        ) {
+                            if (estaCargando) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.Save, contentDescription = "Guardar")
+                            }
+                        }
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            when {
+                estaCargando && reporte == null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                reporte == null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No se pudo cargar el reporte")
+                    }
+                }
+
+                else -> {
+                    error?.let { mensajeError ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Warning, contentDescription = "Error", tint = MaterialTheme.colorScheme.error)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = mensajeError, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Información actual del reporte",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Estado: ${reporte!!.estado}")
+                            Text("Fecha creación: ${java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(java.util.Date(reporte!!.fechaCreacion))}")
+                            Text("Ubicación: ${"%.6f".format(reporte!!.latitud)}, ${"%.6f".format(reporte!!.longitud)}")
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = titulo,
+                        onValueChange = { titulo = it },
+                        label = { Text("Título del reporte *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        isError = titulo.isBlank()
+                    )
+
+                    OutlinedTextField(
+                        value = descripcion,
+                        onValueChange = { descripcion = it },
+                        label = { Text("Descripción detallada *") },
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        singleLine = false,
+                        maxLines = 5,
+                        isError = descripcion.isBlank()
+                    )
+
+                    Text("Tipo de problema:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.entries.forEach { tipo ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().selectable(selected = tipoSeleccionado == tipo, onClick = { tipoSeleccionado = tipo }).padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = tipoSeleccionado == tipo, onClick = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = when (tipo) {
+                                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.BACHE -> "Bache"
+                                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.ALUMBRADO -> "Alumbrado público"
+                                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.BASURA -> "Basura acumulada"
+                                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.AGUA -> "Problema de agua"
+                                        mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte.OTRO -> "Otro"
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+
+                    Text("Nivel de gravedad:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Baja", "Media", "Alta", "Urgente").forEach { gravedad ->
+                            FilterChip(
+                                selected = gravedadSeleccionada == gravedad,
+                                onClick = { gravedadSeleccionada = gravedad },
+                                label = { Text(gravedad) }
+                            )
+                        }
+                    }
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "⚠️ Información importante",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "• Solo puedes editar reportes que te pertenecen\n" +
+                                        "• No puedes cambiar el estado del reporte\n" +
+                                        "• La ubicación no se puede modificar",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+# PantallaEliminarCuenta.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelPerfil
+/**
+ * Pantalla para confirmar y procesar la eliminación de la cuenta de usuario
+ * Requiere confirmación y verificación de identidad del usuario
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param onConfirmDelete Callback para confirmar la eliminación
+ * @param onCancel Callback para cancelar la eliminación
+ * @param onBack Callback para regresar
+ */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaEliminarCuentaSimple(
+    navController: NavController
+) {
+    // Implementación de la pantalla de eliminación de cuenta
+    // Incluiría: advertencias, verificación de contraseña, confirmación
+    /**
+     * Componente de advertencia de eliminación de cuenta
+     *
+     * @param consequences Consecuencias de eliminar la cuenta
+     */
+    val viewModel: ViewModelPerfil = hiltViewModel()
+    val context = LocalContext.current
+
+    val usuario by viewModel.usuario.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.limpiarError()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Eliminar Cuenta") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, "Regresar")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Advertencia importante
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
+                ),
+                border = CardDefaults.outlinedCardBorder()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = "Advertencia",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Eliminar Mi Cuenta",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Esta acción es permanente y no se puede deshacer",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // Información del usuario
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        "Tu información:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = "Nombre",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Nombre: ${usuario?.nombre ?: "No disponible"}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Email,
+                            contentDescription = "Email",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Email: ${usuario?.email ?: "No disponible"}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.DateRange,
+                            contentDescription = "Fecha",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Miembro desde: ${usuario?.fechaCreacion?.let {
+                                java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date(it))
+                            } ?: "No disponible"}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Instrucciones
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        "¿Cómo eliminar mi cuenta?",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        Text(
+                            "1.",
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Haz clic en el botón 'Enviar Solicitud por Email'",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        Text(
+                            "2.",
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Se abrirá tu aplicación de email con un mensaje pre-escrito",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        Text(
+                            "3.",
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Envíanos el email y nuestro equipo procesará tu solicitud en 24-48 horas",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Botón principal
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(
+                    onClick = {
+                        if (viewModel.enviarEmailEliminacion(context)) {
+                            // Email enviado exitosamente
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 8.dp,
+                        pressedElevation = 4.dp
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Email,
+                        contentDescription = "Enviar email",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "ENVIAR SOLICITUD POR EMAIL",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Opcionalmente, puedes enviar un email directamente a:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text(
+                        text = "1224100827.mrs@gmail.com",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Información de contacto
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        "Información importante",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Text(
+                        "• La eliminación de tu cuenta es permanente",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Text(
+                        "• Todos tus datos serán eliminados de nuestros servidores",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Text(
+                        "• No podrás recuperar tu cuenta después de este proceso",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Text(
+                        "• Te contactaremos para confirmar antes de proceder",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // Mostrar error si existe
+            error?.let { mensajeError ->
+                if (mensajeError.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Text(
+                            text = "Error: $mensajeError",
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+```
+# PantallaEstadistica.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.componentes.*
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelEstadisticas
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.EstadoUIEstadisticas
+/**
+ * Pantalla que muestra estadísticas y métricas de reportes
+ * Incluye gráficos y datos sobre la actividad de reportes
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja las estadísticas
+ * @param timeRange Rango de tiempo para las estadísticas
+ * @param onTimeRangeChange Callback para cambiar el rango de tiempo
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaEstadisticas(
+    onNavegarAtras: () -> Unit,
+    viewModel: ViewModelEstadisticas = hiltViewModel()
+) {
+
+
+
+
+
+    /**
+     * Componente de gráfico de reportes por categoría
+     *
+     * @param data Datos para el gráfico
+     * @param category Categoría seleccionada (opcional)
+     */
+    val estadoUI by viewModel.estadoUI.collectAsStateWithLifecycle()
+    val estadisticas by viewModel.estadisticas.collectAsStateWithLifecycle()
+    val pestanaSeleccionada by viewModel.pestanaSeleccionada.collectAsStateWithLifecycle()
+    val filtros by viewModel.filtros.collectAsStateWithLifecycle()
+    val mostrarDialogoFiltros by viewModel.mostrarDialogoFiltros.collectAsStateWithLifecycle()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("Estadísticas Avanzadas", style = MaterialTheme.typography.headlineSmall)
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.exportarDatos() },
+                        enabled = estadoUI !is EstadoUIEstadisticas.Exportando
+                    ) {
+                        if (estadoUI is EstadoUIEstadisticas.Exportando) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        } else {
+                            Icon(Icons.Default.Download, contentDescription = "Exportar datos")
+                        }
+                    }
+                    IconButton(onClick = { viewModel.mostrarDialogoFiltros() }) {
+                        if (filtros.tieneFiltros) {
+                            BadgedBox(badge = { Badge { Text("!") } }) {
+                                Icon(Icons.Default.FilterList, contentDescription = "Filtros")
+                            }
+                        } else {
+                            Icon(Icons.Default.FilterList, contentDescription = "Filtros")
+                        }
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        when (estadoUI) {
+            is EstadoUIEstadisticas.Cargando -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text("Cargando estadísticas...")
+                    }
+                }
+            }
+            is EstadoUIEstadisticas.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(Icons.Default.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(64.dp))
+                        Text(text = (estadoUI as EstadoUIEstadisticas.Error).mensaje, style = MaterialTheme.typography.bodyLarge)
+                        Button(onClick = { viewModel.cargarEstadisticas() }) { Text("Reintentar") }
+                    }
+                }
+            }
+            else -> {
+                Column(
+                    modifier = Modifier.padding(paddingValues).fillMaxSize()
+                ) {
+                    MetricasPrincipales(estadisticas = estadisticas)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    PestanasGraficas(
+                        pestanaSeleccionada = pestanaSeleccionada,
+                        onPestanaCambiada = { viewModel.cambiarPestana(it) },
+                        estadisticas = estadisticas,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        if (mostrarDialogoFiltros) {
+            DialogoFiltros(
+                filtrosActuales = filtros,
+                onFiltrosActualizados = { nuevosFiltros ->
+                    viewModel.actualizarFiltros(nuevosFiltros)
+                    viewModel.ocultarDialogoFiltros()
+                },
+                onLimpiarFiltros = {
+                    viewModel.limpiarFiltros()
+                    viewModel.ocultarDialogoFiltros()
+                },
+                onCancelar = { viewModel.ocultarDialogoFiltros() }
+            )
+        }
+    }
+}
+
+@Composable
+fun MetricasPrincipales(estadisticas: mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.Estadisticas) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        TarjetaMetrica(
+            titulo = "Total",
+            valor = estadisticas.totalReportes.toString(),
+            icono = Icons.Default.Assignment,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        TarjetaMetrica(
+            titulo = "Resueltos",
+            valor = "${estadisticas.porcentajeResueltos.toInt()}%",
+            icono = Icons.Default.CheckCircle,
+            color = Color(0xFF4CAF50),
+            modifier = Modifier.weight(1f)
+        )
+        TarjetaMetrica(
+            titulo = "Pendientes",
+            valor = estadisticas.reportesPendientes.toString(),
+            icono = Icons.Default.Schedule,
+            color = Color(0xFFFF9800),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+fun TarjetaMetrica(titulo: String, valor: String, icono: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(imageVector = icono, contentDescription = titulo, tint = color, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = valor, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
+            Text(text = titulo, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+fun PestanasGraficas(pestanaSeleccionada: Int, onPestanaCambiada: (Int) -> Unit, estadisticas: mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.Estadisticas, modifier: Modifier = Modifier) {
+    val pestanas = listOf("Distribución", "Tendencia", "Actividad")
+    Column(modifier = modifier) {
+        TabRow(selectedTabIndex = pestanaSeleccionada, modifier = Modifier.fillMaxWidth()) {
+            pestanas.forEachIndexed { index, titulo ->
+                Tab(selected = pestanaSeleccionada == index, onClick = { onPestanaCambiada(index) }, text = { Text(titulo) })
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (pestanaSeleccionada) {
+                0 -> SeccionDistribucion(estadisticas = estadisticas)
+                1 -> SeccionTendencia(estadisticas = estadisticas)
+                2 -> SeccionActividad(estadisticas = estadisticas)
+            }
+        }
+    }
+}
+
+@Composable
+fun SeccionDistribucion(estadisticas: mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.Estadisticas) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        Text("Distribución por Tipo de Reporte", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        GraficaBarrasTipoReal(estadisticas.distribucionPorTipo)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Distribución por Estado", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        GraficaPastelEstadoReal(estadisticas.distribucionPorEstado)
+    }
+}
+
+@Composable
+fun SeccionTendencia(estadisticas: mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.Estadisticas) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        Text("Tendencia Mensual de Reportes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        GraficaLineasTendenciaReal(estadisticas.tendenciaMensual)
+
+        Text("Resumen de Tendencia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Mes Actual", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        estadisticas.tendenciaMensual.values.lastOrNull()?.toString() ?: "0",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text("reportes", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Promedio Mensual", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        "${estadisticas.tendenciaMensual.values.average().toInt()}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text("reportes", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SeccionActividad(estadisticas: mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.Estadisticas) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Reportes Más Activos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            "Reportes con más comentarios",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        if (estadisticas.reportesMasActivos.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Forum,
+                        contentDescription = "Sin comentarios",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        "No hay reportes con comentarios",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                estadisticas.reportesMasActivos.forEach { reporte ->
+                    TarjetaReporteActivo(reporte = reporte)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TarjetaReporteActivo(reporte: mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = reporte.titulo,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Por: ${reporte.usuarioNombre}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Tipo: ${reporte.tipo.name}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Badge(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
+                    Text("${reporte.comentarios.size}", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            if (reporte.comentarios.isNotEmpty()) {
+                Text(
+                    text = "\"${reporte.comentarios.last().texto.take(60)}...\"",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                )
+            }
+        }
+    }
+}
+```
+# PantallasInicioSesion.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.EstadoAutenticacion
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelAutenticacion
+/**
+ * Pantalla de inicio de sesión para usuarios registrados
+ * Permite autenticarse con correo electrónico y contraseña
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja la autenticación
+ * @param onLoginSuccess Callback cuando el login es exitoso
+ * @param onNavigateToRegister Callback para navegar al registro
+ * @param onForgotPassword Callback para recuperar contraseña
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaInicioSesion(
+    onInicioSesionExitoso: () -> Unit,
+    onNavegarAPanelAdmin: () -> Unit,
+    onNavegarAtras: () -> Unit,
+    viewModel: ViewModelAutenticacion = hiltViewModel()
+) {
+    /**
+     * Componente del formulario de inicio de sesión
+     *
+     * @param onEmailChange Callback cuando cambia el email
+     * @param onPasswordChange Callback cuando cambia la contraseña
+     * @param onLogin Click para iniciar sesión
+     * @param isLoading Indica si está cargando
+     */
+    var email by remember { mutableStateOf("") }
+    var contrasena by remember { mutableStateOf("") }
+    var mostrarError by remember { mutableStateOf(false) }
+    var mensajeError by remember { mutableStateOf("") }
+
+    val estadoUI by viewModel.estadoUI.collectAsState()
+    val usuario by viewModel.usuarioActual.collectAsState()
+
+    LaunchedEffect(estadoUI) {
+        when (estadoUI) {
+            is EstadoAutenticacion.Exito -> {
+                val usuario = (estadoUI as EstadoAutenticacion.Exito).usuario
+                if (usuario.rol == RolUsuario.ADMINISTRADOR) {
+                    onNavegarAPanelAdmin()
+                } else {
+                    onInicioSesionExitoso()
+                }
+            }
+            is EstadoAutenticacion.Error -> {
+                mostrarError = true
+                mensajeError = (estadoUI as EstadoAutenticacion.Error).mensaje
+            }
+            else -> {}
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Iniciar Sesión") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { paddingValores ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValores)
+                .padding(24.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Campo Email
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                    mostrarError = false
+                },
+                label = { Text("Correo electrónico") },
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = "Email")
+                },
+                isError = mostrarError,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Campo Contraseña
+            OutlinedTextField(
+                value = contrasena,
+                onValueChange = {
+                    contrasena = it
+                    mostrarError = false
+                },
+                label = { Text("Contraseña") },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = "Contraseña")
+                },
+                visualTransformation = PasswordVisualTransformation(),
+                isError = mostrarError,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Botón Iniciar Sesión
+            Button(
+                onClick = {
+                    if (email.isNotBlank() && contrasena.isNotBlank()) {
+                        viewModel.iniciarSesion(email, contrasena)
+                    } else {
+                        mostrarError = true
+                        mensajeError = "Por favor completa todos los campos"
+                    }
+                },
+                enabled = estadoUI !is EstadoAutenticacion.Cargando,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                if (estadoUI is EstadoAutenticacion.Cargando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Iniciar Sesión", fontSize = 16.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Enlace recuperar contraseña
+            TextButton(onClick = { /* TODO: Recuperar contraseña */ }) {
+                Text("¿Olvidaste tu contraseña?")
+            }
+
+            // Mostrar error si existe
+            if (mostrarError) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = mensajeError,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+```
+# PantallaInputCoordenadas.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import android.annotation.SuppressLint
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.gms.maps.model.LatLng
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelSeleccionUbicacion
+/**
+ * Pantalla para ingresar coordenadas manualmente (latitud y longitud)
+ * Alternativa a la selección por mapa para ubicaciones específicas
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param initialCoords Coordenadas iniciales (opcional)
+ * @param onCoordinatesSubmit Callback cuando se envían las coordenadas
+ * @param onCancel Callback para cancelar
+ */
+@SuppressLint("StateFlowValueCalledInComposition")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaInputCoordenadas(
+    onCoordenadasConfirmadas: (LatLng) -> Unit,
+    onCancelar: () -> Unit,
+    viewModel: ViewModelSeleccionUbicacion = hiltViewModel()
+) {
+    /**
+     * Componente de validación de coordenadas
+     *
+     * @param latitude Latitud ingresada
+     * @param longitude Longitud ingresada
+     * @param isValid Indica si las coordenadas son válidas
+     */
+    var latitud by remember { mutableStateOf("") }
+    var longitud by remember { mutableStateOf("") }
+    var mostrarError by remember { mutableStateOf(false) }
+    val error by viewModel.error.collectAsState()
+    val context = LocalContext.current
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Ingresar Coordenadas Manualmente") },
+                navigationIcon = {
+                    IconButton(onClick = onCancelar) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            try {
+                                val lat = latitud.toDouble()
+                                val lng = longitud.toDouble()
+
+                                if (lat in -90.0..90.0 && lng in -180.0..180.0) {
+                                    val coordenadas = LatLng(lat, lng)
+                                    viewModel.establecerUbicacionManual(lat, lng)
+                                    onCoordenadasConfirmadas(coordenadas)
+                                } else {
+                                    mostrarError = true
+                                }
+                            } catch (e: NumberFormatException) {
+                                mostrarError = true
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = "Confirmar")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Coordenadas para Dolores Hidalgo, Gto.",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "• Latitud: 21.156100",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "• Longitud: -100.934200",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Rangos válidos:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "• Latitud: -90° a 90° (ej: 21.156100)",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "• Longitud: -180° a 180° (ej: -100.934200)",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            // Campo Latitud
+            OutlinedTextField(
+                value = latitud,
+                onValueChange = {
+                    latitud = it
+                    mostrarError = false
+                },
+                label = { Text("Latitud") },
+                placeholder = { Text("Ej: 21.156100") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal
+                ),
+                isError = mostrarError,
+                supportingText = {
+                    if (mostrarError) {
+                        Text("Latitud inválida. Debe ser entre -90 y 90")
+                    }
+                }
+            )
+
+            // Campo Longitud
+            OutlinedTextField(
+                value = longitud,
+                onValueChange = {
+                    longitud = it
+                    mostrarError = false
+                },
+                label = { Text("Longitud") },
+                placeholder = { Text("Ej: -100.934200") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal
+                ),
+                isError = mostrarError,
+                supportingText = {
+                    if (mostrarError) {
+                        Text("Longitud inválida. Debe ser entre -180 y 180")
+                    }
+                }
+            )
+
+            // Botón para usar ubicación actual del dispositivo
+            Button(
+                onClick = { viewModel.obtenerUbicacionActual(context) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Usar Mi Ubicación Actual del Dispositivo")
+            }
+
+            // Mostrar error del ViewModel
+            error?.let { mensajeError ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text(
+                        text = mensajeError,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+
+            // Coordenadas actuales si están disponibles
+            viewModel.ubicacionActual.value?.let { ubicacion ->
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Ubicación actual detectada:",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Lat: ${"%.6f".format(ubicacion.latitude)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Lng: ${"%.6f".format(ubicacion.longitude)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                latitud = "%.6f".format(ubicacion.latitude)
+                                longitud = "%.6f".format(ubicacion.longitude)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Usar Estas Coordenadas")
+                        }
+                    }
+                }
+            }
+
+            // Botón para usar coordenadas de Dolores Hidalgo
+            OutlinedButton(
+                onClick = {
+                    latitud = "21.156100"
+                    longitud = "-100.934200"
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Usar Coordenadas de Dolores Hidalgo")
+            }
+        }
+    }
+}
+```
+# PantallaListaReportes.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack // ¡AGREGA ESTE IMPORT!
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.presentacion.componentes.TarjetaReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelReportes
+/**
+ * Pantalla que muestra una lista de reportes disponibles
+ * Puede filtrarse por categoría, ubicación y estado
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja la lista de reportes
+ * @param onReportClick Callback cuando se hace clic en un reporte
+ * @param onFilterChange Callback para cambiar filtros
+ */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaListaReportes(
+    onNavegarACrearReporte: () -> Unit,
+    onNavegarADetalleReporte: (String) -> Unit,
+    onNavegarAEditarReporte: (String) -> Unit,
+    onNavegarAtras: () -> Unit, // ¡AGREGA ESTE PARÁMETRO!
+    viewModel: ViewModelReportes = hiltViewModel()
+) {
+    /**
+     * Componente de búsqueda de reportes
+     *
+     * @param searchText Texto de búsqueda
+     * @param onSearchTextChange Callback cuando cambia el texto de búsqueda
+     * @param onSearch Callback para ejecutar la búsqueda
+     */
+    val reportes by viewModel.reportes.collectAsState(emptyList())
+    val estaCargando by viewModel.estaCargando.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarReportes()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Reportes de la Comunidad") },
+                navigationIcon = { // ¡AGREGA ESTE BLOQUE!
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO: Implementar búsqueda */ }) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Buscar",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNavegarACrearReporte,
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Nuevo Reporte")
+            }
+        }
+    ) { paddingValores ->
+        if (estaCargando) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValores),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator()
+                Text("Cargando reportes...", modifier = Modifier.padding(top = 16.dp))
+            }
+        } else if (reportes.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValores),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    "No hay reportes aún",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "Sé el primero en reportar algo en tu comunidad",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValores),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(reportes) { reporte ->
+                    TarjetaReporte(
+                        reporte = reporte,
+                        onClic = { onNavegarADetalleReporte(reporte.id) },
+                        onMeGusta = {
+                            viewModel.alternarMeGusta(reporte.id)
+                        },
+                        onComentar = {
+                            onNavegarADetalleReporte(reporte.id)
+                        },
+                        estaLiked = reporte.meGustas.contains(viewModel.obtenerUsuarioActualId()),
+                        puedeEditar = reporte.usuarioId == viewModel.obtenerUsuarioActualId(),
+                        onEditar = {
+                            onNavegarAEditarReporte(reporte.id)
+                        },
+                        onEliminar = { },
+                        usuarioActualId = viewModel.obtenerUsuarioActualId()
+                    )
+                }
+            }
+        }
+    }
+}
+```
+# PantallaMapa.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelMapa
+/**
+ * Pantalla principal del mapa interactivo con reportes geolocalizados
+ * Muestra reportes en un mapa y permite interactuar con ellos
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja el mapa y reportes
+ * @param onReportClick Callback cuando se hace clic en un marcador de reporte
+ * @param onUserLocationClick Callback cuando se hace clic en la ubicación del usuario
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaMapa(
+    onNavegarAtras: () -> Unit,
+    onNavegarADetalleReporte: (String) -> Unit,
+    viewModel: ViewModelMapa = hiltViewModel()
+) {
+    /**
+     * Componente del mapa con marcadores de reportes
+     *
+     * @param reports Lista de reportes a mostrar en el mapa
+     * @param userLocation Ubicación del usuario (opcional)
+     * @param onMarkerClick Callback al hacer clic en un marcador
+     */
+    val reportes by viewModel.reportes.collectAsState()
+    val ubicacionActual by viewModel.ubicacionActual.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+
+    val doloresHidalgo = LatLng(21.156100, -100.934200)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(doloresHidalgo, 14f)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Mapa de Reportes") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            if (ubicacionActual != null) {
+                FloatingActionButton(
+                    onClick = {
+                        ubicacionActual?.let { ubicacion ->
+                            cameraPositionState.position = CameraPosition.fromLatLngZoom(
+                                LatLng(ubicacion.latitude, ubicacion.longitude), 15f
+                            )
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.MyLocation, contentDescription = "Mi ubicación")
+                }
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                properties = MapProperties(
+                    mapType = MapType.NORMAL,
+                    isMyLocationEnabled = true
+                ),
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = true,
+                    myLocationButtonEnabled = false,
+                    compassEnabled = true
+                )
+            ) {
+                Marker(
+                    state = MarkerState(position = doloresHidalgo),
+                    title = "Dolores Hidalgo, Gto.",
+                    snippet = "Cuna de la Independencia Nacional",
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)
+                )
+
+                // Marcadores de reportes
+                reportes.forEach { reporte ->
+                    if (reporte.estado == EstadoReporte.APROBADO || reporte.estado == EstadoReporte.RESUELTO) {
+                        Marker(
+                            state = MarkerState(
+                                position = LatLng(reporte.latitud, reporte.longitud)
+                            ),
+                            title = reporte.titulo,
+                            snippet = "Tipo: ${reporte.tipo.name} • Estado: ${reporte.estado.name}",
+                            icon = BitmapDescriptorFactory.defaultMarker(
+                                obtenerColorPorTipo(reporte.tipo)
+                            ),
+                            onClick = {
+
+                                onNavegarADetalleReporte(reporte.id)
+                                true
+                            }
+                        )
+                    }
+                }
+
+                // Marcador de ubicación actual si está disponible
+                ubicacionActual?.let { ubicacion ->
+                    Marker(
+                        state = MarkerState(
+                            position = LatLng(ubicacion.latitude, ubicacion.longitude)
+                        ),
+                        title = "Mi ubicación",
+                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)
+                    )
+                }
+            }
+
+            // Leyenda de colores
+            LeyendaMapa(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            )
+
+            // Indicador de carga
+            if (estaCargando) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LeyendaMapa(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text(
+                "Leyenda",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            LeyendaItem("Baches", Color(0xFFF44336))
+            LeyendaItem("Alumbrado", Color(0xFFFFC107))
+            LeyendaItem("Basura", Color(0xFF4CAF50))
+            LeyendaItem("Agua", Color(0xFF2196F3))
+            LeyendaItem("Otros", Color(0xFFFF9800))
+        }
+    }
+}
+
+@Composable
+fun LeyendaItem(tipo: String, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = tipo,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+private fun obtenerColorPorTipo(tipo: TipoReporte): Float {
+    return when (tipo) {
+        TipoReporte.BACHE -> BitmapDescriptorFactory.HUE_RED
+        TipoReporte.ALUMBRADO -> BitmapDescriptorFactory.HUE_YELLOW
+        TipoReporte.BASURA -> BitmapDescriptorFactory.HUE_GREEN
+        TipoReporte.AGUA -> BitmapDescriptorFactory.HUE_BLUE
+        TipoReporte.OTRO -> BitmapDescriptorFactory.HUE_ORANGE
+    }
+}
+```
+# PantallaMapaPublico.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelMapaPublico
+/**
+ * Pantalla de mapa público para visualización sin autenticación
+ * Muestra reportes públicos y permite explorar sin login
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param publicReports Lista de reportes públicos
+ * @param onReportClick Callback cuando se hace clic en un reporte
+ * @param onNavigateToLogin Callback para navegar al login
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaMapaPublico(
+    onNavegarAtras: () -> Unit,
+    viewModel: ViewModelMapaPublico = hiltViewModel()
+) {
+    val reportes by viewModel.reportesPublicos.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+
+    // Posición inicial: Dolores Hidalgo
+    val doloresHidalgo = LatLng(21.156100, -100.934200)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(doloresHidalgo, 14f)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Mapa de Reportes - Público") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* Mostrar información */ }) {
+                        Icon(Icons.Default.Info, contentDescription = "Información")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                properties = MapProperties(
+                    mapType = MapType.NORMAL
+                ),
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = true,
+                    compassEnabled = true
+                )
+            ) {
+                // Marcador de Dolores Hidalgo
+                Marker(
+                    state = MarkerState(position = doloresHidalgo),
+                    title = "Dolores Hidalgo, Gto.",
+                    snippet = "Cuna de la Independencia Nacional",
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)
+                )
+
+                // Marcadores de reportes públicos (solo aprobados y resueltos)
+                reportes.forEach { reporte ->
+                    // Asegurarse de que solo mostramos reportes aprobados o resueltos
+                    if (reporte.estado == EstadoReporte.APROBADO || reporte.estado == EstadoReporte.RESUELTO) {
+                        Marker(
+                            state = MarkerState(
+                                position = LatLng(reporte.latitud, reporte.longitud)
+                            ),
+                            title = reporte.titulo,
+                            snippet = "Tipo: ${reporte.tipo.name} • Estado: ${reporte.estado.name}",
+                            // ¡¡¡¡¡AQUÍ ESTÁ LA SOLUCIÓN!!!!!
+                            // Agregar el color según el tipo de reporte
+                            icon = BitmapDescriptorFactory.defaultMarker(
+                                obtenerColorPorTipoPublico(reporte.tipo)
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Leyenda
+            LeyendaMapaPublico(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            )
+
+            // Indicador de carga
+            if (estaCargando) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            // Información para usuarios no autenticados
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Vista Pública",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "• Solo se muestran reportes aprobados y resueltos",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "• Inicia sesión para crear reportes y ver más detalles",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "• Los colores representan el tipo de problema",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Función para obtener el color según el tipo de reporte (VERSIÓN PÚBLICA)
+private fun obtenerColorPorTipoPublico(tipo: TipoReporte): Float {
+    return when (tipo) {
+        TipoReporte.BACHE -> BitmapDescriptorFactory.HUE_RED
+        TipoReporte.ALUMBRADO -> BitmapDescriptorFactory.HUE_YELLOW
+        TipoReporte.BASURA -> BitmapDescriptorFactory.HUE_GREEN
+        TipoReporte.AGUA -> BitmapDescriptorFactory.HUE_BLUE
+        TipoReporte.OTRO -> BitmapDescriptorFactory.HUE_ORANGE
+    }
+}
+
+@Composable
+fun LeyendaMapaPublico(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text(
+                "Leyenda",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            LeyendaItemPublico("Baches", Color(0xFFF44336), BitmapDescriptorFactory.HUE_RED)
+            LeyendaItemPublico("Alumbrado", Color(0xFFFFC107), BitmapDescriptorFactory.HUE_YELLOW)
+            LeyendaItemPublico("Basura", Color(0xFF4CAF50), BitmapDescriptorFactory.HUE_GREEN)
+            LeyendaItemPublico("Agua", Color(0xFF2196F3), BitmapDescriptorFactory.HUE_BLUE)
+            LeyendaItemPublico("Otros", Color(0xFFFF9800), BitmapDescriptorFactory.HUE_ORANGE)
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Estados:",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium
+            )
+            Text("• ✅ Aprobados", style = MaterialTheme.typography.bodySmall)
+            Text("• ✅ Resueltos", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+fun LeyendaItemPublico(tipo: String, color: Color, hue: Float? = null) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(
+                text = tipo,
+                style = MaterialTheme.typography.labelSmall
+            )
+            hue?.let {
+                Text(
+                    text = "Color: ${hueToString(it)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+// Función para convertir el valor hue a texto descriptivo
+private fun hueToString(hue: Float): String {
+    return when (hue) {
+        BitmapDescriptorFactory.HUE_RED -> "Rojo"
+        BitmapDescriptorFactory.HUE_YELLOW -> "Amarillo"
+        BitmapDescriptorFactory.HUE_GREEN -> "Verde"
+        BitmapDescriptorFactory.HUE_BLUE -> "Azul"
+        BitmapDescriptorFactory.HUE_ORANGE -> "Naranja"
+        else -> "Desconocido"
+    }
+} 
+```
+# PantallaNotificasiones.kt
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelNotificaciones
+/**
+ * Pantalla que muestra las notificaciones del usuario
+ * Incluye notificaciones de reportes, comentarios y sistema
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param viewModel ViewModel que maneja las notificaciones
+ * @param onNotificationClick Callback cuando se hace clic en una notificación
+ * @param onMarkAllRead Callback para marcar todas como leídas
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaNotificaciones(
+    onNavegarAtras: () -> Unit,
+    viewModel: ViewModelNotificaciones = hiltViewModel()
+) {
+    /**
+     * Componente de item de notificación
+     *
+     * @param notification Notificación a mostrar
+     * @param onClick Callback al hacer clic
+     * @param onSwipeAction Acción al deslizar
+     */
+    val notificaciones by viewModel.notificaciones.collectAsState()
+    val estaCargando by viewModel.estaCargando.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarNotificaciones()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Notificaciones") },
+                navigationIcon = {
+                    IconButton(onClick = onNavegarAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        if (estaCargando) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (notificaciones.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Notifications,
+                        contentDescription = "Sin notificaciones",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "No tienes notificaciones",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(notificaciones) { notificacion ->
+                    TarjetaNotificacion(notificacion = notificacion)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TarjetaNotificacion(notificacion: mx.edu.utng.mrs.mycomunidad.datos.modelo.Notificacion) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = notificacion.titulo,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = notificacion.mensaje,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Hace ${obtenerTiempoTranscurrido(notificacion.fecha)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun obtenerTiempoTranscurrido(tiempoMillis: Long): String {
+    val diferencia = System.currentTimeMillis() - tiempoMillis
+    val minutos = diferencia / (1000 * 60)
+    val horas = minutos / 60
+    val dias = horas / 24
+
+    return when {
+        minutos < 1 -> "un momento"
+        minutos < 60 -> "$minutos min"
+        horas < 24 -> "$horas h"
+        else -> "$dias d"
+    }
+}
+@Composable
+fun TarjetaNotificacion(
+    notificacion: mx.edu.utng.mrs.mycomunidad.datos.modelo.Notificacion,
+    onMarcarLeida: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (notificacion.leida)
+                MaterialTheme.colorScheme.surface
+            else
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .clickable {
+                    if (!notificacion.leida) {
+                        onMarcarLeida(notificacion.id)
+                    }
+                }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = notificacion.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (!notificacion.leida) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = notificacion.mensaje,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Hace ${obtenerTiempoTranscurrido(notificacion.fecha)} • ${notificacion.tipo}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+```
+# PantallaPrincipal
+```
+package mx.edu.utng.mrs.mycomunidad.presentacion.pantallas
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import mx.edu.utng.mrs.mycomunidad.presentacion.viewmodel.ViewModelEstadisticas
+/**
+ * Pantalla principal de la aplicación después del login
+ * Sirve como hub central con acceso a todas las funciones principales
+ *
+ * @param modifier Modificador para personalizar el layout
+ * @param user Usuario actual
+ * @param onNavigateToReports Callback para navegar a reportes
+ * @param onNavigateToMap Callback para navegar al mapa
+ * @param onNavigateToProfile Callback para navegar al perfil
+ * @param onNavigateToNotifications Callback para navegar a notificaciones
+ */
+
+data class Funcionalidad(
+    val id: String,
+    val icono: ImageVector,
+    val titulo: String,
+    val descripcion: String,
+    val ruta: String? = null,
+    val onClick: (() -> Unit)? = null
+)
+
+/**
+ * Componente de dashboard con accesos rápidos
+ *
+ * @param userRole Rol del usuario para mostrar opciones relevantes
+ * @param quickActions Acciones rápidas disponibles
+ */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PantallaPrincipal(
+    onCerrarSesion: () -> Unit,
+    onNavegarACrearReporte: () -> Unit,
+    onNavegarAMapa: () -> Unit,
+    onNavegarAMisReportes: () -> Unit,
+    onNavegarAReportesComunidad: () -> Unit,
+    onNavegarAValidacion: () -> Unit,
+    onNavegarAPerfil: () -> Unit,
+    onNavegarANotificaciones: () -> Unit,
+    onNavegarAEstadisticas: () -> Unit,
+    esAdministrador: Boolean = false
+) {
+    val viewModelEstadisticas: ViewModelEstadisticas = hiltViewModel()
+    val estadisticas by viewModelEstadisticas.estadisticas.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModelEstadisticas.cargarEstadisticas()
+    }
+
+    // Funcionalidades BASE para todos los usuarios
+    val funcionalidadesBase = listOf(
+        Funcionalidad(
+            id = "mapa",
+            icono = Icons.Default.Map,
+            titulo = "Mapa",
+            descripcion = "Ver reportes en el mapa",
+            onClick = onNavegarAMapa
+        ),
+        Funcionalidad(
+            id = "mis_reportes",
+            icono = Icons.Default.List,
+            titulo = "Mis Reportes",
+            descripcion = "Ver mis reportes enviados",
+            onClick = onNavegarAMisReportes
+        ),
+        Funcionalidad(
+            id = "reportes_comunidad",
+            icono = Icons.Default.Public,
+            titulo = "Reportes Comunidad",
+            descripcion = "Ver reportes de la comunidad",
+            onClick = onNavegarAReportesComunidad
+        ),
+        Funcionalidad(
+            id = "crear_reporte",
+            icono = Icons.Default.Add,
+            titulo = "Crear Reporte",
+            descripcion = "Reportar un problema",
+            onClick = onNavegarACrearReporte
+        ),
+        Funcionalidad(
+            id = "notificaciones",
+            icono = Icons.Default.Notifications,
+            titulo = "Notificaciones",
+            descripcion = "Ver mis notificaciones",
+            onClick = onNavegarANotificaciones
+        ),
+        Funcionalidad(
+            id = "perfil",
+            icono = Icons.Default.Person,
+            titulo = "Mi Perfil",
+            descripcion = "Ver y editar mi perfil",
+            onClick = onNavegarAPerfil
+        )
+    )
+
+    // Funcionalidades EXTRAS solo para administradores
+    val funcionalidadesAdmin = if (esAdministrador) {
+        listOf(
+            Funcionalidad(
+                id = "validacion",
+                icono = Icons.Default.Verified,
+                titulo = "Validar Reportes",
+                descripcion = "Revisar reportes pendientes",
+                onClick = onNavegarAValidacion
+            ),
+            Funcionalidad(
+                id = "estadisticas",
+                icono = Icons.Default.Analytics,
+                titulo = "Estadísticas",
+                descripcion = "Ver estadísticas de la comunidad",
+                onClick = onNavegarAEstadisticas
+            )
+        )
+    } else {
+        emptyList()
+    }
+
+    // Combinar funcionalidades
+    val funcionalidades = funcionalidadesBase + funcionalidadesAdmin
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "Mi Comunidad",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                actions = {
+                    IconButton(onClick = onNavegarAPerfil) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = "Mi perfil",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    IconButton(onClick = onCerrarSesion) {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "Cerrar sesión",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNavegarACrearReporte,
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, "Nuevo reporte")
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        "¡Bienvenido a Mi Comunidad!",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Reporta problemas y mejora Dolores Hidalgo",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    if (estadisticas.totalReportes > 0) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            EstadisticaItem(
+                                valor = estadisticas.totalReportes.toString(),
+                                etiqueta = "Reportes totales"
+                            )
+                            EstadisticaItem(
+                                valor = estadisticas.reportesResueltos.toString(),
+                                etiqueta = "Resueltos"
+                            )
+                            EstadisticaItem(
+                                valor = "${estadisticas.porcentajeResueltos.toInt()}%",
+                                etiqueta = "Eficiencia"
+                            )
+                        }
+                    }
+                }
+            }
+            Text(
+                text = "Funcionalidades",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(funcionalidades) { funcionalidad ->
+                    TarjetaFuncionalidad(
+                        funcionalidad = funcionalidad,
+                        onClick = funcionalidad.onClick
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TarjetaFuncionalidad(
+    funcionalidad: Funcionalidad,
+    onClick: (() -> Unit)? = null
+) {
+    Card(
+        onClick = { onClick?.invoke() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        enabled = onClick != null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = funcionalidad.icono,
+                contentDescription = funcionalidad.titulo,
+                modifier = Modifier.size(32.dp),
+                tint = if (onClick != null) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = funcionalidad.titulo,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                color = if (onClick != null) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            )
+            Text(
+                text = funcionalidad.descripcion,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = if (onClick != null) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            )
+        }
+    }
+}
+
+@Composable
+fun EstadisticaItem(valor: String, etiqueta: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = valor,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = etiqueta,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+```
+# PantallaRegistro
+```
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
