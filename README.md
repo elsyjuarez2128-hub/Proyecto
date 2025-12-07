@@ -279,7 +279,6 @@ git push origin feature-nueva-funcion
 <img src="https://github.com/user-attachments/assets/d12866d8-e2da-4216-adc4-56b1ca16097d" alt="Pantalla principal" width="120">
 --
 # 🗺️ Mapa de Reportes
---
-![Mapa de mapa](https://github.com/user-attachments/assets/3c461b6e-e4fd-4c0b-8cc8-8ce0d38afa5b)
+--<img src="https://github.com/user-attachments/assets/3c461b6e-e4fd-4c0b-8cc8-8ce0d38afa5b" alt="Mapa de reportes" width="120">
 --
 # 
