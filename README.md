@@ -242,13 +242,13 @@ El usuario ingresa a la app.
 
 Selecciona "Reportar problema".
 
-# Agrega: Foto
+Agrega: Foto
 
-# Descripción
+Descripción
 
-# Tipo de problema
+Tipo de problema
 
-# Ubicación en el mapa
+Ubicación en el mapa
 
 El reporte se almacena en la base de datos.
 
