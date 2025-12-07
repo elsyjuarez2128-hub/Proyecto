@@ -234,25 +234,44 @@ Modelos de Datos
 │   ├── ManejadorMapas.kt
 │   ├── MainActivity.kt
 │   └── MyCominidadApplication.kt
+```
 
-### Uso / Flujo de la aplicación
+# Uso / Flujo de la aplicación
 
 El usuario ingresa a la app.
 
 Selecciona "Reportar problema".
 
-Agrega:
+# Agrega: Foto
 
-Foto
+# Descripción
 
-Descripción
+# Tipo de problema
 
-Tipo de problema
-
-Ubicación en el mapa
+# Ubicación en el mapa
 
 El reporte se almacena en la base de datos.
 
 El usuario puede visualizar todos los reportes en Google Maps.
 
 Puede revisar su historial y estado de cada reporte.
+
+# 🤝 Guía para contribuidores
+# Haz un fork del proyecto.
+
+Crea una rama nueva:
+```
+git checkout -b feature-nueva-funcion
+```
+Realiza los cambios.
+
+Haz commit con mensaje claro:
+```
+git commit -m "Agrega función de reporte con foto"
+```
+Sube los cambios:
+```
+git push origin feature-nueva-funcion
+```
+
+# 🖼️ Screenshots
