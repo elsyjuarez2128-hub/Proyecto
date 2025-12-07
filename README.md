@@ -271,6 +271,7 @@ git push origin feature-nueva-funcion
 --<img src="https://github.com/user-attachments/assets/3c461b6e-e4fd-4c0b-8cc8-8ce0d38afa5b" alt="Mapa de reportes" width="120">
 --
 # Comentarios Fuente con KDoc/JSDoc
+
 # 🟦 1. MyComunidadApplication.kt (KDoc para App)
 ```
 package mx.edu.utng.mrs.mycomunidad
@@ -697,6 +698,7 @@ class MainActivity : ComponentActivity() {
 ```
 # Datos - Fuente de Datos
 # ServiceFirebase.kt
+```
 package mx.edu.utng.mrs.mycomunidad.datos.fuente_datos
 
 import android.content.Context
@@ -879,8 +881,7 @@ class ServicioFirebase @Inject constructor(
     }
 }
 ```
-```
-# Datos - Modelos  
+# Cometarios.kt 
 ```
 package mx.edu.utng.mrs.mycomunidad.datos.fuente_datos
 
@@ -1069,6 +1070,7 @@ class ServicioFirebase @Inject constructor(
 ```
 # Notificaciones.kt
 ```
+
 package mx.edu.utng.mrs.mycomunidad.datos.modelo
 
 import android.os.Parcelable
@@ -3054,8 +3056,2095 @@ class RepositorioUsuarios @Inject constructor(
     }
 }
 ```
+# App Module
+# Module ubicacion.kt
 ```
+package mx.edu.utng.mrs.mycomunidad.di
+
+/**
+ * Módulo de ubicación que proporciona dependencias relacionadas con la geolocalización
+ *
+ * @property context Contexto de la aplicación para inicializar servicios de ubicación
+ */
+import android.content.Context
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import mx.edu.utng.mrs.mycomunidad.servicios.ServicioUbicacionManager
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object ModuloUbicacion {
+
+
+
+    /**
+     * Inicializa el módulo de ubicación con el contexto de la aplicación
+     * @param context Contexto de la aplicación
+     */
+    @Provides
+    @Singleton
+    fun proporcionarServicioUbicacionManager(
+        @ApplicationContext context: Context
+    ): ServicioUbicacionManager {
+        return ServicioUbicacionManager(context)
+    }
+}
 ```
+# ModuleApplication.kt
+```
+package mx.edu.utng.mrs.mycomunidad.di
+
+import android.app.Application
+import android.content.Context
+import com.google.firebase.firestore.FirebaseFirestore
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import mx.edu.utng.mrs.mycomunidad.datos.fuente_datos.ServicioFirebase
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioComentarios
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioNotificaciones
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import mx.edu.utng.mrs.mycomunidad.servicios.AdministradorNotificaciones
+import javax.inject.Singleton
+/**
+ * Clase principal de la aplicación que maneja la inicialización global
+ *
+ * @property applicationContext Contexto de la aplicación
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+object ModuloAplicacion {
+
+    /**
+     * Se llama cuando la aplicación es creada por primera vez
+     * Inicializa componentes globales como Firebase y módulos de la aplicación
+     */
+    @Provides
+    @Singleton
+    fun proporcionarContext(application: Application): Context {
+        return application.applicationContext
+    }
+
+    @Provides
+    @Singleton
+    fun proporcionarFirebaseFirestore(): FirebaseFirestore {
+        return FirebaseFirestore.getInstance()
+    }
+
+    @Provides
+    @Singleton
+    fun proporcionarServicioFirebase(
+        @ApplicationContext context: Context
+    ): ServicioFirebase {
+        return ServicioFirebase(context)
+    }
+
+    @Provides
+    @Singleton
+    fun proporcionarRepositorioComentarios(): RepositorioComentarios {
+        return RepositorioComentarios()
+    }
+
+    @Provides
+    @Singleton
+    fun proporcionarRepositorioNotificaciones(): RepositorioNotificaciones {
+        return RepositorioNotificaciones()
+    }
+
+    @Provides
+    @Singleton
+    fun proporcionarAdministradorNotificaciones(): AdministradorNotificaciones {
+        return AdministradorNotificaciones()
+    }
+
+    @Provides
+    @Singleton
+    fun proporcionarRepositorioReportes(
+        servicioFirebase: ServicioFirebase
+    ): RepositorioReportes {
+        return RepositorioReportes(servicioFirebase)
+    }
+}
+```
+ # Dominio - Casos de Uso
+ # CasoUsoAutenticacion.kt
+```
+package mx.edu.utng.mrs.mycomunidad.dominio.casos_uso
+
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioAutenticacion
+import javax.inject.Inject
+/**
+ * Caso de uso para manejar la lógica de autenticación de usuarios
+ *
+ * @property repository Repositorio de autenticación
+ */
+class CasoUsoAutenticacion @Inject constructor(
+    private val repositorioAutenticacion: RepositorioAutenticacion
+) {
+
+    /**
+     * Verifica si hay un usuario autenticado en el sistema
+     * @return true si hay un usuario autenticado, false en caso contrario
+     */
+    suspend fun iniciarSesion(email: String, contrasena: String): Result<Usuario> {
+        // ✅ Validaciones de negocio
+        if (email.isBlank() || contrasena.isBlank()) {
+            return Result.failure(Exception("Email y contraseña son requeridos"))
+        }
+
+        return repositorioAutenticacion.iniciarSesion(email, contrasena)
+    }
+    /**
+     * Obtiene el usuario autenticado actualmente
+     * @return Objeto Usuario si está autenticado, null en caso contrario
+     * @throws Exception si ocurre un error al obtener el usuario
+     */
+    suspend fun registrarUsuario(nombre: String, email: String, contrasena: String): Result<Usuario> {
+        // ✅ Validaciones de negocio
+        if (nombre.length < 3) {
+            return Result.failure(Exception("El nombre debe tener al menos 3 caracteres"))
+        }
+        if (contrasena.length < 6) {
+            return Result.failure(Exception("La contraseña debe tener al menos 6 caracteres"))
+        }
+        if (!email.contains("@")) {
+            return Result.failure(Exception("Email no válido"))
+        }
+
+        // ✅ CORREGIDO: Los parámetros en el orden correcto
+        return repositorioAutenticacion.registrarUsuario(nombre, email, contrasena)
+    }
+    /**
+     * Obtiene el ID del usuario autenticado actualmente
+     * @return ID del usuario si está autenticado, null en caso contrario
+     */
+    suspend fun cerrarSesion(): Result<Boolean> {
+        return repositorioAutenticacion.cerrarSesion()
+    }
+    /**
+     * Cierra la sesión del usuario actual
+     * @throws Exception si ocurre un error al cerrar sesión
+     */
+    fun obtenerUsuarioActual(): Usuario? {
+        return repositorioAutenticacion.obtenerUsuarioActual()
+    }
+
+}
+```
+# CasoUsoReportes.kt
+```
+package mx.edu.utng.mrs.mycomunidad.dominio.casos_uso
+/*
+import android.net.Uri
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.EstadoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Reporte
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.TipoReporte
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioReportes
+import javax.inject.Inject
+/**
+ * Caso de uso para manejar la lógica de negocio de reportes
+ *
+ * @property reportesRepository Repositorio de reportes
+ */
+class CasoUsoReportes @Inject constructor(
+    private val repositorioReportes: RepositorioReportes
+) {
+ /**
+     * Crea un nuevo reporte en el sistema
+     * @param titulo Título del reporte
+     * @param descripcion Descripción detallada del problema
+     * @param idUsuario ID del usuario que crea el reporte
+     * @param ubicacion Ubicación asociada al reporte (opcional)
+     * @return ID del reporte creado
+     * @throws Exception si ocurre un error en la creación
+     */
+    suspend fun crearReporte(
+        titulo: String,
+        descripcion: String,
+        tipo: TipoReporte,
+        gravedad: String,
+        latitud: Double,
+        longitud: Double,
+        imagenes: List<Uri> = emptyList()
+    ): Result<Reporte> {
+        // Validaciones de negocio
+        if (titulo.length < 5) {
+            return Result.failure(Exception("El título debe tener al menos 5 caracteres"))
+        }
+        if (descripcion.length < 10) {
+            return Result.failure(Exception("La descripción debe tener al menos 10 caracteres"))
+        }
+        /**
+     * Obtiene los reportes de un usuario específico
+     * @param idUsuario ID del usuario
+     * @return Lista de reportes del usuario
+     * @throws Exception si ocurre un error en la consulta
+     */
+
+
+        return repositorioReportes.crearReporte(
+            titulo = titulo,
+            descripcion = descripcion,
+            tipo = tipo,
+            gravedad = gravedad,
+            latitud = latitud,
+            longitud = longitud,
+            imagenes = imagenes
+        )
+    }
+    
+ /**
+     * Actualiza el estado de un reporte
+     * @param idReporte ID del reporte a actualizar
+     * @param nuevoEstado Nuevo estado del reporte
+     * @throws Exception si ocurre un error en la actualización
+     */
+
+    // ✅ CORREGIDO: SUSPEND - Lista directa
+    suspend fun obtenerTodosLosReportes(): List<Reporte> {
+        return repositorioReportes.obtenerTodosLosReportes()
+    }
+
+    // ✅ CORREGIDO: SUSPEND - Lista directa
+    suspend fun obtenerReportesPendientes(): List<Reporte> {
+        return repositorioReportes.obtenerReportesPendientes()
+    }
+
+    // ✅ CORREGIDO: SUSPEND - Lista directa
+    suspend fun obtenerReportesAprobados(): List<Reporte> {
+        return repositorioReportes.obtenerReportesAprobados()
+    }
+
+    suspend fun obtenerReportePorId(reporteId: String): Reporte? {
+        return repositorioReportes.obtenerReportePorId(reporteId)
+    }
+
+    suspend fun agregarComentario(
+        reporteId: String,
+        texto: String,
+        usuarioId: String,
+        usuarioNombre: String
+    ): Result<Boolean> {
+        if (texto.isBlank()) {
+            return Result.failure(Exception("El comentario no puede estar vacío"))
+        }
+
+        return repositorioReportes.agregarComentario(
+            reporteId = reporteId,
+            comentario = texto,
+            usuarioId = usuarioId,
+            usuarioNombre = usuarioNombre
+        )
+    }
+
+    suspend fun actualizarEstadoReporte(reporteId: String, estado: EstadoReporte): Result<Boolean> {
+        return repositorioReportes.actualizarEstadoReporte(reporteId, estado)
+    }
+
+    suspend fun eliminarReporte(reporteId: String, usuarioId: String, esAdmin: Boolean): Result<Boolean> {
+        return repositorioReportes.eliminarReporte(reporteId, usuarioId, esAdmin)
+    }
+
+    // ✅ CORREGIDO: SUSPEND - Lista directa
+    suspend fun obtenerReportesPorUsuario(usuarioId: String): List<Reporte> {
+        return repositorioReportes.obtenerReportesPorUsuario(usuarioId)
+    }
+
+    // ✅ CORREGIDO: SUSPEND - Lista directa
+    suspend fun obtenerReportesPorTipo(tipo: TipoReporte): List<Reporte> {
+        return repositorioReportes.obtenerReportesPorTipo(tipo)
+    }
+
+    suspend fun obtenerEstadisticas(): Map<String, Any> {
+        return repositorioReportes.obtenerEstadisticas()
+    }
+
+    suspend fun actualizarReporte(
+        reporteId: String,
+        titulo: String,
+        descripcion: String,
+        tipo: TipoReporte
+    ): Result<Boolean> {
+        // Validaciones de negocio
+        if (titulo.length < 5) {
+            return Result.failure(Exception("El título debe tener al menos 5 caracteres"))
+        }
+        if (descripcion.length < 10) {
+            return Result.failure(Exception("La descripción debe tener al menos 10 caracteres"))
+        }
+
+        return repositorioReportes.actualizarReporte(
+            reporteId = reporteId,
+            titulo = titulo,
+            descripcion = descripcion,
+            tipo = tipo
+        )
+    }
+}
+```
+# CasoUsoUsuario.kt
+```
+package mx.edu.utng.mrs.mycomunidad.dominio.casos_uso
+
+import kotlinx.coroutines.flow.Flow
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.RolUsuario
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import mx.edu.utng.mrs.mycomunidad.datos.repositorio.RepositorioUsuarios
+import javax.inject.Inject
+/**
+ * Caso de uso para manejar la lógica de negocio de usuarios
+ *
+ * @property usuarioRepository Repositorio de usuarios
+ */
+class CasoUsoUsuarios @Inject constructor(
+    /**
+     * Registra un nuevo usuario en el sistema
+     * @param nombre Nombre completo del usuario
+     * @param email Correo electrónico del usuario
+     * @param telefono Número de teléfono (opcional)
+     * @param rol Rol del usuario (por defecto "usuario")
+     * @return ID del usuario creado
+     * @throws Exception si ocurre un error en el registro
+     */
+    private val repositorioUsuarios: RepositorioUsuarios
+) {
+
+    fun obtenerTodosLosUsuarios(): Flow<List<Usuario>> {
+        return repositorioUsuarios.obtenerTodosLosUsuarios()
+    }
+
+    /**
+     * Obtiene la información de un usuario por su ID
+     * @param userId ID del usuario a consultar
+     * @return Objeto Usuario si existe, null en caso contrario
+     * @throws Exception si ocurre un error en la consulta
+     */
+    suspend fun obtenerUsuarioPorId(usuarioId: String): Usuario? {
+        if (usuarioId.isBlank()) {
+            return null
+        }
+        return repositorioUsuarios.obtenerUsuarioPorId(usuarioId)
+    }
+    /**
+     * Actualiza la información de un usuario
+     * @param userId ID del usuario a actualizar
+     * @param nombre Nuevo nombre (opcional)
+     * @param telefono Nuevo teléfono (opcional)
+     * @throws Exception si ocurre un error en la actualización
+     */
+    suspend fun actualizarRolUsuario(usuarioId: String, nuevoRol: RolUsuario): Result<Boolean> {
+        if (usuarioId.isBlank()) {
+            return Result.failure(Exception("ID de usuario inválido"))
+        }
+
+        // Validación de negocio: No permitir cambiar rol a uno mismo (esto se haría en ViewModel con el usuario actual)
+        return repositorioUsuarios.actualizarRolUsuario(usuarioId, nuevoRol)
+    }
+
+    /**
+     * Desactiva la cuenta de un usuario
+     * @param userId ID del usuario a desactivar
+     * @throws Exception si ocurre un error en la desactivación
+     */
+    suspend fun desactivarUsuario(usuarioId: String): Result<Boolean> {
+        if (usuarioId.isBlank()) {
+            return Result.failure(Exception("ID de usuario inválido"))
+        }
+
+        // Validación de negocio: No permitir desactivarse a uno mismo (se validaría en ViewModel)
+        return repositorioUsuarios.desactivarUsuario(usuarioId)
+    }
+
+    suspend fun eliminarUsuario(usuarioId: String): Result<Boolean> {
+        if (usuarioId.isBlank()) {
+            return Result.failure(Exception("ID de usuario inválido"))
+        }
+
+        // Validación de negocio: No permitir eliminarse a uno mismo
+        return repositorioUsuarios.eliminarUsuario(usuarioId)
+    }
+
+    fun buscarUsuariosPorNombre(nombre: String): Flow<List<Usuario>> {
+        return repositorioUsuarios.buscarUsuariosPorNombre(nombre)
+    }
+
+    suspend fun actualizarPerfilUsuario(usuarioId: String, nombre: String, imagenUrl: String?): Result<Boolean> {
+        // Validaciones de negocio
+        if (usuarioId.isBlank()) {
+            return Result.failure(Exception("ID de usuario inválido"))
+        }
+        if (nombre.length < 3) {
+            return Result.failure(Exception("El nombre debe tener al menos 3 caracteres"))
+        }
+        if (nombre.length > 50) {
+            return Result.failure(Exception("El nombre no puede tener más de 50 caracteres"))
+        }
+
+        return repositorioUsuarios.actualizarPerfilUsuario(usuarioId, nombre, imagenUrl)
+    }
+
+    // ✅ NUEVOS MÉTODOS MEJORADOS:
+
+    // 1. Obtener usuarios por rol
+    fun obtenerUsuariosPorRol(rol: RolUsuario): Flow<List<Usuario>> {
+        return repositorioUsuarios.obtenerUsuariosPorRol(rol)
+    }
+
+    // 2. Activar usuario (contrario a desactivar)
+    suspend fun activarUsuario(usuarioId: String): Result<Boolean> {
+        if (usuarioId.isBlank()) {
+            return Result.failure(Exception("ID de usuario inválido"))
+        }
+        return repositorioUsuarios.activarUsuario(usuarioId)
+    }
+
+    // 3. Obtener estadísticas de usuarios
+    suspend fun obtenerEstadisticasUsuarios(): Map<String, Int> {
+        return repositorioUsuarios.obtenerEstadisticasUsuarios()
+    }
+
+    // 4. Verificar si el email ya existe (útil para registro)
+    suspend fun verificarEmailExistente(email: String): Boolean {
+        if (!email.contains("@") || !email.contains(".")) {
+            return false
+        }
+        return repositorioUsuarios.verificarEmailExistente(email)
+    }
+
+    // 5. Obtener usuarios activos solamente
+    fun obtenerUsuariosActivos(): Flow<List<Usuario>> {
+        return repositorioUsuarios.obtenerTodosLosUsuarios()
+        // El filtrado por activos se haría en el ViewModel o aquí si fuera suspend
+    }
+
+    // 6. Validar permisos para modificar usuario
+    suspend fun puedeModificarUsuario(usuarioActualId: String, usuarioTargetId: String, esAdmin: Boolean): Boolean {
+        // Un usuario solo puede modificarse a sí mismo a menos que sea admin
+        return esAdmin || usuarioActualId == usuarioTargetId
+    }
+}
+```
+# Presentación - Servicios
+# AdministradorNotificaciones.kt
+```
+package mx.edu.utng.mrs.mycomunidad.servicios
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.google.firebase.messaging.FirebaseMessaging
+import mx.edu.utng.mrs.mycomunidad.MainActivity
+import mx.edu.utng.mrs.mycomunidad.R
+import javax.inject.Inject
+import javax.inject.Singleton
+/**
+ * Administrador central de notificaciones que coordina diferentes servicios
+ *
+ * @property servicioNotificaciones Servicio de notificaciones locales
+ * @property servicioNotificacionesFirestore Servicio de notificaciones en la nube
+ * @property casoUsoAutenticacion Caso de uso para autenticación
+ */
+@Singleton
+class AdministradorNotificaciones @Inject constructor() {
+
+    companion object {
+        private const val TAG = "AdminNotificaciones"
+        const val CANAL_NOTIFICACIONES_ID = "canal_mi_comunidad"
+    }
+    /**
+     * Inicializa el administrador de notificaciones
+     * Configura listeners y sincronización entre servicios
+     */
+    fun inicializarSistemaNotificaciones(context: Context) {
+        Log.d(TAG, "🚀 INICIALIZANDO SISTEMA DE NOTIFICACIONES")
+        crearCanalNotificaciones(context)
+
+        obtenerTokenFCM()
+
+        suscribirATemasBasicos()
+
+        android.os.Handler(context.mainLooper).postDelayed({
+            probarNotificacionLocal(context)
+        }, 5000)
+    }
+
+    private fun obtenerTokenFCM() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                Log.d(TAG, "✅ TOKEN FCM OBTENIDO: ${token?.take(15)}...")
+            } else {
+                Log.e(TAG, "❌ ERROR OBTENIENDO TOKEN: ${task.exception}")
+            }
+        }
+    }
+
+    private fun suscribirATemasBasicos() {
+        val temas = listOf("todos", "usuarios")
+
+        temas.forEach { tema ->
+            FirebaseMessaging.getInstance().subscribeToTopic(tema)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d(TAG, "✅ Suscrito al tema: $tema")
+                    } else {
+                        Log.e(TAG, "❌ Error suscribiendo a $tema: ${task.exception}")
+                    }
+                }
+        }
+    }
+
+    /**
+     * Envía una notificación tanto local como remota
+     * @param titulo Título de la notificación
+     * @param mensaje Contenido de la notificación
+     * @param idUsuarioDestino ID del usuario destinatario
+     * @throws Exception si ocurre un error en el envío
+     */
+    fun probarNotificacionLocal(context: Context) {
+        Log.d(TAG, "🧪 ENVIANDO NOTIFICACIÓN DE PRUEBA...")
+
+        mostrarNotificacion(
+            context = context,
+            titulo = "¡Notificaciones Funcionando! 🎉",
+            mensaje = "El sistema de notificaciones push está configurado correctamente",
+            tipo = "prueba",
+            reporteId = "test-123"
+        )
+    }
+
+    /**
+     * Obtiene todas las notificaciones del usuario actual
+     * @return Lista de notificaciones
+     * @throws Exception si ocurre un error en la obtención
+     */
+    fun mostrarNotificacion(
+        context: Context,
+        titulo: String,
+        mensaje: String,
+        tipo: String = "general",
+        reporteId: String = ""
+    ) {
+        crearCanalNotificaciones(context)
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("desde_notificacion", true)
+            putExtra("tipo_notificacion", tipo)
+            putExtra("reporte_id", reporteId)
+            putExtra("titulo", titulo)
+            putExtra("mensaje", mensaje)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            System.currentTimeMillis().toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationId = System.currentTimeMillis().toInt()
+
+        val notificationBuilder = NotificationCompat.Builder(context, CANAL_NOTIFICACIONES_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(titulo)
+            .setContentText(mensaje)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(mensaje))
+
+        when (tipo) {
+            "nuevo_reporte" -> {
+                notificationBuilder.setColor(context.getColor(android.R.color.holo_blue_light))
+            }
+            "reporte_aprobado" -> {
+                notificationBuilder.setColor(context.getColor(android.R.color.holo_green_light))
+            }
+            "reporte_rechazado" -> {
+                notificationBuilder.setColor(context.getColor(android.R.color.holo_red_light))
+            }
+            "nuevo_comentario" -> {
+                notificationBuilder.setColor(context.getColor(android.R.color.holo_orange_light))
+            }
+            "prueba" -> {
+                notificationBuilder.setColor(context.getColor(android.R.color.holo_purple))
+            }
+        }
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(notificationId, notificationBuilder.build())
+
+        Log.d(TAG, "📤 NOTIFICACIÓN MOSTRADA: $titulo")
+    }
+
+    private fun crearCanalNotificaciones(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CANAL_NOTIFICACIONES_ID,
+                "Notificaciones Mi Comunidad",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notificaciones de reportes y actividades de la comunidad"
+                enableLights(true)
+                enableVibration(true)
+                setShowBadge(true)
+                lightColor = android.graphics.Color.BLUE
+            }
+
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+    /**
+     * Marca una notificación como leída
+     * @param idNotificacion ID de la notificación
+     * @throws Exception si ocurre un error en la actualización
+     */
+    fun enviarNotificacionNuevoReporte(context: Context, tituloReporte: String, usuarioNombre: String) {
+        mostrarNotificacion(
+            context = context,
+            titulo = "📋 Nuevo Reporte",
+            mensaje = "$usuarioNombre reportó: $tituloReporte",
+            tipo = "nuevo_reporte"
+        )
+    }
+
+    fun enviarNotificacionReporteAprobado(context: Context, tituloReporte: String) {
+        mostrarNotificacion(
+            context = context,
+            titulo = "✅ Reporte Aprobado",
+            mensaje = "Tu reporte '$tituloReporte' ha sido aprobado",
+            tipo = "reporte_aprobado"
+        )
+    }
+}
+```
+# ServicioNotificaciones.kt
+```
+package mx.edu.utng.mrs.mycomunidad.servicios
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+import dagger.hilt.android.AndroidEntryPoint
+import mx.edu.utng.mrs.mycomunidad.MainActivity
+import mx.edu.utng.mrs.mycomunidad.R
+import javax.inject.Inject
+
+/**
+ * Servicio para manejar notificaciones locales en el dispositivo
+ *
+ * @property context Contexto de la aplicación
+ * @property notificationManager Gestor de notificaciones del sistema
+ */
+@AndroidEntryPoint
+class ServicioNotificaciones : FirebaseMessagingService() {
+
+    @Inject
+    lateinit var administradorNotificaciones: AdministradorNotificaciones
+    /**
+     * Crea el canal de notificaciones para Android 8.0+
+     * Este método debe ser llamado antes de mostrar cualquier notificación
+     */
+    companion object {
+        private const val TAG = "ServicioNotificaciones"
+        const val CANAL_NOTIFICACIONES_ID = "canal_mi_comunidad"
+    }
+    /**
+     * Muestra una notificación local en el dispositivo
+     * @param titulo Título de la notificación
+     * @param mensaje Contenido de la notificación
+     * @param id Identificador único de la notificación (opcional)
+     */
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        Log.d(TAG, "🔥 NUEVO TOKEN FCM: ${token.take(10)}...")
+
+        // Guardar token en SharedPreferences como respaldo
+        val sharedPref = getSharedPreferences("notificaciones", Context.MODE_PRIVATE)
+        sharedPref.edit().putString("fcm_token", token).apply()
+
+        Log.d(TAG, "✅ Token guardado en SharedPreferences")
+    }
+
+    override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        Log.d(TAG, "📨 MENSAJE RECIBIDO de: ${remoteMessage.from}")
+
+        if (remoteMessage.data.isNotEmpty()) {
+            Log.d(TAG, "📊 Datos del mensaje: ${remoteMessage.data}")
+            manejarMensajeDeDatos(remoteMessage.data)
+            return
+        }
+
+        remoteMessage.notification?.let { notificacion ->
+            Log.d(TAG, "📢 Notificación directa")
+            mostrarNotificacionSimple(
+                titulo = notificacion.title ?: "Mi Comunidad",
+                mensaje = notificacion.body ?: "Nueva notificación"
+            )
+        }
+    }
+
+    private fun manejarMensajeDeDatos(datos: Map<String, String>) {
+        val tipo = datos["tipo"] ?: "general"
+        val titulo = datos["titulo"] ?: "Mi Comunidad"
+        val mensaje = datos["mensaje"] ?: "Nueva notificación"
+        val reporteId = datos["reporteId"] ?: ""
+
+        Log.d(TAG, "🎯 Tipo: $titulo - $mensaje")
+
+        mostrarNotificacionCompleta(titulo, mensaje, tipo, reporteId)
+    }
+
+    private fun mostrarNotificacionSimple(titulo: String, mensaje: String) {
+        crearCanalNotificaciones()
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            System.currentTimeMillis().toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationId = System.currentTimeMillis().toInt()
+
+        val notification = NotificationCompat.Builder(this, CANAL_NOTIFICACIONES_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(titulo)
+            .setContentText(mensaje)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(notificationId, notification)
+
+        Log.d(TAG, "✅ Notificación simple mostrada")
+    }
+
+    private fun mostrarNotificacionCompleta(titulo: String, mensaje: String, tipo: String, reporteId: String) {
+        crearCanalNotificaciones()
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("desde_notificacion", true)
+            putExtra("tipo_notificacion", tipo)
+            putExtra("reporte_id", reporteId)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            System.currentTimeMillis().toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationId = System.currentTimeMillis().toInt()
+
+        val notificationBuilder = NotificationCompat.Builder(this, CANAL_NOTIFICACIONES_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(titulo)
+            .setContentText(mensaje)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(mensaje))
+
+        when (tipo) {
+            "nuevo_reporte" -> notificationBuilder.setColor(getColor(android.R.color.holo_blue_light))
+            "reporte_aprobado" -> notificationBuilder.setColor(getColor(android.R.color.holo_green_light))
+            "reporte_rechazado" -> notificationBuilder.setColor(getColor(android.R.color.holo_red_light))
+            "nuevo_comentario" -> notificationBuilder.setColor(getColor(android.R.color.holo_orange_light))
+        }
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(notificationId, notificationBuilder.build())
+
+        Log.d(TAG, "✅ Notificación completa mostrada - ID: $notificationId")
+    }
+
+    /**
+     * Elimina una notificación local específica
+     * @param id Identificador de la notificación a eliminar
+     */
+    private fun crearCanalNotificaciones() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CANAL_NOTIFICACIONES_ID,
+                "Notificaciones Mi Comunidad",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notificaciones de reportes y actividades de la comunidad"
+                enableLights(true)
+                enableVibration(true)
+                lightColor = android.graphics.Color.BLUE
+            }
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+}
+```
+# ServicioNotificacionesFirestore.kt
+```
+package mx.edu.utng.mrs.mycomunidad.servicios
+
+import android.util.Log
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Notificacion
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+/**
+ * Servicio para manejar notificaciones en Firestore (en la nube)
+ *
+ * @property repository Repositorio de notificaciones
+ */
+@Singleton
+/**
+ * Envía una notificación a Firestore
+ * @param titulo Título de la notificación
+ * @param mensaje Contenido de la notificación
+ * @param idUsuarioDestino ID del usuario destinatario
+ * @param tipo Tipo de notificación (por defecto "general")
+ * @return ID de la notificación creada
+ * @throws Exception si ocurre un error en el envío
+ */
+class ServicioNotificacionesFirestore @Inject constructor() {
+
+    private val db = FirebaseFirestore.getInstance()
+    private val TAG = "NotificacionesFirestore"
+    suspend fun enviarNotificacionReporteRechazado(
+        usuarioId: String,
+        tituloReporte: String,
+        motivo: String = ""
+    ): Boolean {
+        return try {
+            Log.d(TAG, "🚀 INICIANDO ENVÍO DE NOTIFICACIÓN DE RECHAZO")
+            Log.d(TAG, "👤 Destinatario: $usuarioId")
+            Log.d(TAG, "📋 Reporte: $tituloReporte")
+
+            val notificacion = Notificacion(
+                id = UUID.randomUUID().toString(),
+                titulo = "❌ Reporte Rechazado",
+                mensaje = "Tu reporte '$tituloReporte' ha sido rechazado${if (motivo.isNotEmpty()) ". Motivo: $motivo" else ""}",
+                tipo = "reporte_rechazado",
+                usuarioId = usuarioId,
+                datosExtra = mapOf(
+                    "reporteTitulo" to tituloReporte,
+                    "motivo" to motivo
+                ),
+                fecha = System.currentTimeMillis(),
+                leida = false
+            )
+
+            Log.d(TAG, "💾 GUARDANDO NOTIFICACIÓN EN FIRESTORE...")
+            // 1. Guardar en Firestore
+            val resultado = guardarNotificacionEnFirestore(notificacion)
+
+            if (resultado) {
+                Log.d(TAG, "✅ NOTIFICACIÓN DE RECHAZO GUARDADA EN FIRESTORE")
+                true
+            } else {
+                Log.e(TAG, "❌ FALLÓ AL GUARDAR NOTIFICACIÓN DE RECHAZO")
+                false
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR enviando notificación de rechazo: ${e.message}")
+            false
+        }
+    }
+    
+    suspend fun enviarNotificacionReporteAprobado(
+        usuarioId: String,
+        tituloReporte: String
+    ): Boolean {
+        return try {
+            Log.d(TAG, "🚀 INICIANDO ENVÍO DE NOTIFICACIÓN DE APROBACIÓN")
+            Log.d(TAG, "👤 Destinatario: $usuarioId")
+            Log.d(TAG, "📋 Reporte: $tituloReporte")
+
+            val notificacion = Notificacion(
+                id = UUID.randomUUID().toString(),
+                titulo = "✅ Reporte Aprobado",
+                mensaje = "¡Felicidades! Tu reporte '$tituloReporte' ha sido aprobado y ahora es visible para la comunidad",
+                tipo = "reporte_aprobado",
+                usuarioId = usuarioId,
+                datosExtra = mapOf(
+                    "reporteTitulo" to tituloReporte
+                ),
+                fecha = System.currentTimeMillis(),
+                leida = false
+            )
+
+            Log.d(TAG, "💾 GUARDANDO NOTIFICACIÓN EN FIRESTORE...")
+            val resultado = guardarNotificacionEnFirestore(notificacion)
+
+            if (resultado) {
+                Log.d(TAG, "✅ NOTIFICACIÓN DE APROBACIÓN GUARDADA EN FIRESTORE")
+                true
+            } else {
+                Log.e(TAG, "❌ FALLÓ AL GUARDAR NOTIFICACIÓN DE APROBACIÓN")
+                false
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR enviando notificación de aprobación: ${e.message}")
+            false
+        }
+    }
+    private suspend fun guardarNotificacionEnFirestore(notificacion: Notificacion): Boolean {
+        return try {
+            Log.d(TAG, "💾 INTENTANDO GUARDAR NOTIFICACIÓN EN FIRESTORE...")
+            Log.d(TAG, "   🆔 ID: ${notificacion.id}")
+            Log.d(TAG, "   👤 usuarioId: ${notificacion.usuarioId}")
+            Log.d(TAG, "   📝 título: ${notificacion.titulo}")
+
+            db.collection("notificaciones")
+                .document(notificacion.id)
+                .set(notificacion.toMap())
+                .await()
+
+            Log.d(TAG, "✅ NOTIFICACIÓN GUARDADA EXITOSAMENTE EN FIRESTORE")
+            true
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR GUARDANDO NOTIFICACIÓN EN FIRESTORE: ${e.message}")
+            false
+        }
+    }
+    /**
+     * Obtiene las notificaciones de un usuario específico
+     * @param userId ID del usuario
+     * @return Lista de notificaciones del usuario
+     * @throws Exception si ocurre un error en la obtención
+     */
+    suspend fun obtenerNotificacionesUsuario(usuarioId: String): List<Notificacion> {
+        return try {
+            Log.d(TAG, "🔍 OBTENIENDO NOTIFICACIONES PARA USUARIO: $usuarioId")
+
+            val snapshot = db.collection("notificaciones")
+                .whereEqualTo("usuarioId", usuarioId)
+                .orderBy("fecha", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            val notificaciones = snapshot.documents.mapNotNull { doc ->
+                try {
+                    Notificacion(
+                        id = doc.id,
+                        titulo = doc.getString("titulo") ?: "",
+                        mensaje = doc.getString("mensaje") ?: "",
+                        tipo = doc.getString("tipo") ?: "general",
+                        usuarioId = doc.getString("usuarioId") ?: "",
+                        datosExtra = (doc.get("datosExtra") as? Map<String, String>) ?: emptyMap(),
+                        fecha = doc.getLong("fecha") ?: System.currentTimeMillis(),
+                        leida = doc.getBoolean("leida") ?: false
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error parseando notificación ${doc.id}: ${e.message}")
+                    null
+                }
+            }
+
+            Log.d(TAG, "📋 NOTIFICACIONES OBTENIDAS: ${notificaciones.size} para usuario: $usuarioId")
+            notificaciones
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR OBTENIENDO NOTIFICACIONES: ${e.message}")
+            emptyList()
+        }
+    }
+    /**
+     * Marca una notificación como leída
+     * @param idNotificacion ID de la notificación
+     * @throws Exception si ocurre un error en la actualización
+     */
+    suspend fun marcarNotificacionLeida(notificacionId: String): Boolean {
+        return try {
+            db.collection("notificaciones")
+                .document(notificacionId)
+                .update("leida", true)
+                .await()
+
+            Log.d(TAG, "✅ Notificación marcada como leída: $notificacionId")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error marcando notificación como leída: ${e.message}")
+            false
+        }
+    }
+    /**
+     * Marca una notificación como leída
+     * @param idNotificacion ID de la notificación
+     * @throws Exception si ocurre un error en la actualización
+     */
+    suspend fun diagnosticoNotificaciones(usuarioId: String) {
+        try {
+            Log.d(TAG, "🎯 ===========================================")
+            Log.d(TAG, "🔍 DIAGNÓSTICO DE NOTIFICACIONES")
+            Log.d(TAG, "👤 USUARIO: $usuarioId")
+            Log.d(TAG, "🎯 ===========================================")
+
+            val snapshot = db.collection("notificaciones")
+                .whereEqualTo("usuarioId", usuarioId)
+                .get()
+                .await()
+
+            Log.d(TAG, "📊 NOTIFICACIONES ENCONTRADAS: ${snapshot.documents.size}")
+
+            if (snapshot.documents.isEmpty()) {
+                Log.d(TAG, "📭 NO HAY NOTIFICACIONES PARA ESTE USUARIO")
+            } else {
+                snapshot.documents.forEachIndexed { index, doc ->
+                    Log.d(TAG, "   ${index + 1}. ${doc.getString("titulo")} - ${doc.getString("tipo")} - Leída: ${doc.getBoolean("leida") ?: false}")
+                }
+            }
+
+            Log.d(TAG, "✅ DIAGNÓSTICO COMPLETADO")
+            Log.d(TAG, "🎯 ===========================================")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR en diagnóstico: ${e.message}")
+        }
+    }
+
+    /**
+     * Obtiene un flujo de notificaciones no leídas para un usuario
+     * @param userId ID del usuario
+     * @return Flow de lista de notificaciones no leídas
+     */
+    suspend fun enviarNotificacionNuevoReporte(
+        tituloReporte: String,
+        tipoReporte: String,
+        usuarioNombre: String
+    ): Boolean {
+        return try {
+            Log.d(TAG, "🚀 ENVIANDO NOTIFICACIÓN DE NUEVO REPORTE")
+
+            val notificacion = Notificacion(
+                id = UUID.randomUUID().toString(),
+                titulo = "📢 Nuevo Reporte",
+                mensaje = "$usuarioNombre ha creado un nuevo reporte: $tituloReporte ($tipoReporte)",
+                tipo = "nuevo_reporte",
+                usuarioId = "administradores", // Para que todos los admins lo vean
+                datosExtra = mapOf(
+                    "reporteTitulo" to tituloReporte,
+                    "tipoReporte" to tipoReporte,
+                    "usuarioNombre" to usuarioNombre
+                ),
+                fecha = System.currentTimeMillis(),
+                leida = false
+            )
+
+            val resultado = guardarNotificacionEnFirestore(notificacion)
+
+            if (resultado) {
+                Log.d(TAG, "✅ NOTIFICACIÓN DE NUEVO REPORTE ENVIADA")
+            } else {
+                Log.e(TAG, "❌ FALLÓ AL ENVIAR NOTIFICACIÓN DE NUEVO REPORTE")
+            }
+
+            resultado
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ ERROR enviando notificación de nuevo reporte: ${e.message}")
+            false
+        }
+    }
+}
+```
+# ServicioUbicacion.kt
+```
+package mx.edu.utng.mrs.mycomunidad.servicios
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
+import android.os.Binder
+import android.os.Build
+import android.os.IBinder
+import android.os.Looper
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.*
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.Tasks
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import mx.edu.utng.mrs.mycomunidad.R
+import javax.inject.Inject
+/**
+ * Servicio para manejar la obtención de ubicación del dispositivo
+ *
+ * @property context Contexto de la aplicación
+ * @property fusedLocationClient Cliente de ubicación fusionada de Google Play Services
+ */
+@AndroidEntryPoint
+class ServicioUbicacion : Service() {
+    /**
+     * Verifica si la aplicación tiene permisos de ubicación
+     * @return true si tiene permisos, false en caso contrario
+     */
+    @Inject
+    lateinit var administradorNotificaciones: AdministradorNotificaciones
+
+    private val binder = LocalBinder()
+    private lateinit var clienteUbicacion: FusedLocationProviderClient
+    private lateinit var solicitudUbicacion: LocationRequest
+    private lateinit var callbackUbicacion: LocationCallback
+
+    private val _ubicacionActual = MutableStateFlow<Location?>(null)
+    val ubicacionActual: StateFlow<Location?> = _ubicacionActual
+
+    private val _estaMonitoreando = MutableStateFlow(false)
+    val estaMonitoreando: StateFlow<Boolean> = _estaMonitoreando
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
+    inner class LocalBinder : Binder() {
+        fun getService(): ServicioUbicacion = this@ServicioUbicacion
+    }
+
+    override fun onBind(intent: Intent?): IBinder = binder
+
+    override fun onCreate() {
+        super.onCreate()
+        inicializarServicioUbicacion()
+    }
+    /**
+     * Obtiene la última ubicación conocida del dispositivo
+     * @return Objeto Location con la última ubicación conocida, null si no está disponible
+     * @throws SecurityException si no hay permisos de ubicación
+     * @throws Exception si ocurre un error al obtener la ubicación
+     */
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACCION_INICIAR -> iniciarMonitoreoUbicacion()
+            ACCION_DETENER -> detenerMonitoreoUbicacion()
+        }
+        return START_STICKY
+    }
+
+    /**
+     * Inicia la actualización continua de ubicación
+     * @param intervalo Intervalo de actualización en milisegundos
+     * @param callback Función a ejecutar cuando se obtiene una nueva ubicación
+     * @throws SecurityException si no hay permisos de ubicación
+     */
+
+
+    private fun inicializarServicioUbicacion() {
+        clienteUbicacion = LocationServices.getFusedLocationProviderClient(this)
+
+        solicitudUbicacion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                10000L // Intervalo de 10 segundos
+            ).apply {
+                setMinUpdateIntervalMillis(5000L) // Intervalo mínimo de 5 segundos
+                setMaxUpdateDelayMillis(15000L) // Máximo retraso de 15 segundos
+                setWaitForAccurateLocation(true)
+            }.build()
+        } else {
+            LocationRequest.create().apply {
+                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+                interval = 10000L
+                fastestInterval = 5000L
+                maxWaitTime = 15000L
+            }
+        }
+
+        callbackUbicacion = object : LocationCallback() {
+            override fun onLocationResult(resultadoUbicacion: LocationResult) {
+                super.onLocationResult(resultadoUbicacion)
+                resultadoUbicacion.lastLocation?.let { ubicacion ->
+                    _ubicacionActual.value = ubicacion
+                    // Aquí puedes guardar la ubicación o enviarla a tu backend
+                    manejarNuevaUbicacion(ubicacion)
+                }
+            }
+
+            override fun onLocationAvailability(disponibilidadUbicacion: LocationAvailability) {
+                super.onLocationAvailability(disponibilidadUbicacion)
+                if (!disponibilidadUbicacion.isLocationAvailable) {
+                    _error.value = "La ubicación no está disponible"
+                } else {
+                    _error.value = null
+                }
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun iniciarMonitoreoUbicacion() {
+        if (tienePermisosUbicacion()) {
+            try {
+                clienteUbicacion.requestLocationUpdates(
+                    solicitudUbicacion,
+                    callbackUbicacion,
+                    Looper.getMainLooper()
+                )
+                _estaMonitoreando.value = true
+                _error.value = null
+                iniciarNotificacionPrimerPlano()
+            } catch (e: SecurityException) {
+                _error.value = "Error de permisos: ${e.message}"
+            } catch (e: Exception) {
+                _error.value = "Error al iniciar monitoreo: ${e.message}"
+            }
+        } else {
+            _error.value = "Permisos de ubicación no concedidos"
+        }
+    }
+
+    fun detenerMonitoreoUbicacion() {
+        try {
+            clienteUbicacion.removeLocationUpdates(callbackUbicacion)
+            _estaMonitoreando.value = false
+            _ubicacionActual.value = null
+            _error.value = null
+            detenerNotificacionPrimerPlano()
+            stopSelf()
+        } catch (e: Exception) {
+            _error.value = "Error al detener monitoreo: ${e.message}"
+        }
+    }
+
+    private fun tienePermisosUbicacion(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    @SuppressLint("MissingPermission")
+    fun obtenerUbicacionActualUnaVez(): Task<Location> {
+        return if (tienePermisosUbicacion()) {
+            clienteUbicacion.lastLocation
+        } else {
+            Tasks.forException(SecurityException("Permisos de ubicación no concedidos"))
+        }
+    }
+
+    private fun manejarNuevaUbicacion(ubicacion: Location) {
+        // Aquí puedes implementar la lógica para:
+        // - Guardar la ubicación en local
+        // - Enviar a tu backend
+        // - Actualizar la UI si es necesario
+        // - Verificar geocercas, etc.
+
+        // Ejemplo: Guardar última ubicación conocida
+        // sharedPreferences.edit().putString("ultima_ubicacion", "${ubicacion.latitude},${ubicacion.longitude}").apply()
+    }
+
+    @SuppressLint("ForegroundServiceType")
+    private fun iniciarNotificacionPrimerPlano() {
+        crearCanalNotificacionServicio()
+
+        val notification = NotificationCompat.Builder(this, CANAL_SERVICIO_UBICACION_ID)
+            .setContentTitle("Mi Comunidad")
+            .setContentText("Monitoreando ubicación para reportes...")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
+        // Configurar actualización de ubicación
+        // En implementación real se usaría requestLocationUpdates
+
+        startForeground(NOTIFICACION_UBICACION_ID, notification)
+    }
+    /**
+     * Detiene las actualizaciones de ubicación
+     */
+
+    private fun crearCanalNotificacionServicio() {
+        // Remover listeners de ubicación
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val canal = NotificationChannel(
+                CANAL_SERVICIO_UBICACION_ID,
+                CANAL_SERVICIO_UBICACION_NOMBRE,
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Notificación del servicio de ubicación en primer plano"
+                setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+            }
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(canal)
+        }
+    }
+
+    private fun detenerNotificacionPrimerPlano() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        detenerMonitoreoUbicacion()
+    }
+
+    companion object {
+        const val ACCION_INICIAR = "ACCION_INICIAR_MONITOREO"
+        const val ACCION_DETENER = "ACCION_DETENER_MONITOREO"
+        const val NOTIFICACION_UBICACION_ID = 1001
+        const val CANAL_SERVICIO_UBICACION_ID = "canal_servicio_ubicacion"
+        const val CANAL_SERVICIO_UBICACION_NOMBRE = "Servicio de Ubicación"
+
+        fun iniciarServicio(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(
+                    Intent(context, ServicioUbicacion::class.java).apply {
+                        action = ACCION_INICIAR
+                    }
+                )
+            } else {
+                context.startService(
+                    Intent(context, ServicioUbicacion::class.java).apply {
+                        action = ACCION_INICIAR
+                    }
+                )
+            }
+        }
+
+        fun detenerServicio(context: Context) {
+            val intent = Intent(context, ServicioUbicacion::class.java).apply {
+                action = ACCION_DETENER
+            }
+            context.startService(intent)
+        }
+    }
+}
+```
+# UbicacionManager.kt
+```
+
+package mx.edu.utng.mrs.mycomunidad.servicios
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
+import android.os.Looper
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.*
+import com.google.android.gms.tasks.CancellationToken
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.android.gms.tasks.OnTokenCanceledListener
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
+/**
+ * Gestor de ubicación que coordina los servicios de geolocalización
+ *
+ * @property servicioUbicacion Servicio para obtener ubicación del dispositivo
+ */
+@Singleton
+class ServicioUbicacionManager @Inject constructor(
+    private val context: Context
+) {
+    /**
+     * Verifica y solicita los permisos de ubicación necesarios
+     * @return true si ya tiene permisos, false si necesita solicitarlos
+     */
+    private val clienteUbicacion: FusedLocationProviderClient by lazy {
+        LocationServices.getFusedLocationProviderClient(context)
+    }
+
+    /**
+     * Obtiene la ubicación actual del dispositivo
+     * @param onSuccess Callback ejecutado cuando se obtiene la ubicación exitosamente
+     * @param onError Callback ejecutado cuando ocurre un error
+     */
+    private val solicitudUbicacion = LocationRequest.Builder(
+        Priority.PRIORITY_HIGH_ACCURACY,
+        10000L
+    ).apply {
+        setMinUpdateIntervalMillis(5000L)
+        setWaitForAccurateLocation(true)
+    }.build()
+
+    @SuppressLint("MissingPermission")
+
+            /**
+             * Obtiene la dirección a partir de coordenadas
+             * @param latitud Coordenada de latitud
+             * @param longitud Coordenada de longitud
+             * @return Dirección formateada o null si no se puede obtener
+             */fun obtenerUbicacionActualUnaVez(): Flow<Location> = callbackFlow {
+        // Implementación usando Geocoder
+        // Por simplicidad, se devuelve una dirección ficticia
+                 if (!tienePermisosUbicacion()) {
+            close(Exception("Permisos de ubicación no concedidos"))
+            return@callbackFlow
+        }
+
+        /**
+         * Calcula la distancia entre dos ubicaciones
+         * @param ubicacion1 Primera ubicación
+         * @param ubicacion2 Segunda ubicación
+         * @return Distancia en metros
+         */
+        val cancellationTokenSource = CancellationTokenSource()
+
+        clienteUbicacion.getCurrentLocation(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            cancellationTokenSource.token
+        ).addOnSuccessListener { location ->
+            if (location != null) {
+                trySend(location)
+                close()
+            } else {
+                close(Exception("No se pudo obtener la ubicación"))
+            }
+        }.addOnFailureListener { exception ->
+            close(exception)
+        }
+
+        awaitClose {
+            cancellationTokenSource.cancel()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun monitorearUbicacionEnTiempoReal(): Flow<Location> = callbackFlow {
+        if (!tienePermisosUbicacion()) {
+            close(Exception("Permisos de ubicación no concedidos"))
+            return@callbackFlow
+        }
+
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(resultado: LocationResult) {
+                resultado.locations.lastOrNull()?.let { ubicacion ->
+                    trySend(ubicacion)
+                }
+            }
+        }
+
+        clienteUbicacion.requestLocationUpdates(
+            solicitudUbicacion,
+            callback,
+            Looper.getMainLooper()
+        ).addOnFailureListener { exception ->
+            close(exception)
+        }
+
+        awaitClose {
+            clienteUbicacion.removeLocationUpdates(callback)
+        }
+    }
+
+    private fun tienePermisosUbicacion(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    suspend fun obtenerUltimaUbicacionConocida(): Location? {
+        return if (tienePermisosUbicacion()) {
+            try {
+                clienteUbicacion.lastLocation.await()
+            } catch (e: Exception) {
+                null
+            }
+        } else {
+            null
+        }
+    }
+}
+```
+# Utilidades
+# AlmacenamientoSeguro.kt
+```
+package mx.edu.utng.mrs.mycomunidad.utilidades
+
+import android.content.Context
+import android.content.SharedPreferences
+import com.google.gson.Gson
+import dagger.hilt.android.qualifiers.ApplicationContext
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Usuario
+import javax.inject.Inject
+import javax.inject.Singleton
+/**
+ * Utilidad para manejar almacenamiento seguro de datos sensibles usando EncriptedSharedPreferences
+ *
+ * @property context Contexto de la aplicación
+ * @property masterKey Clave maestra para encriptación
+ * @property encryptedPrefs Preferencias encriptadas
+ */
+@Singleton
+class AlmacenamientoSeguro @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+
+    /**
+     * Guarda un valor de forma segura en las preferencias encriptadas
+     * @param key Clave del valor a guardar
+     * @param value Valor a guardar (puede ser String, Int, Boolean, Long, Float)
+     * @throws IllegalArgumentException si el tipo de valor no es soportado
+     */  private val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences("mi_comunidad_prefs", Context.MODE_PRIVATE)
+    }
+    private val gson = Gson()
+
+    companion object {
+        private const val KEY_USUARIO_ACTUAL = "usuario_actual"
+        private const val KEY_SESION_ACTIVA = "sesion_activa"
+        private const val KEY_TOKEN_NOTIFICACIONES = "token_notificaciones"
+    }
+
+    fun guardarSesionUsuario(usuario: Usuario) {
+        val usuarioJson = gson.toJson(usuario)
+        sharedPreferences.edit()
+            .putString(KEY_USUARIO_ACTUAL, usuarioJson)
+            .putBoolean(KEY_SESION_ACTIVA, true)
+            .apply()
+    }
+
+    fun obtenerUsuarioActual(): Usuario? {
+        val usuarioJson = sharedPreferences.getString(KEY_USUARIO_ACTUAL, null)
+        return try {
+            gson.fromJson(usuarioJson, Usuario::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+    /**
+     * Obtiene un valor de forma segura de las preferencias encriptadas
+     * @param key Clave del valor a obtener
+     * @param defaultValue Valor por defecto si la clave no existe
+     * @return Valor almacenado o el valor por defecto
+     */
+    fun limpiarSesion() {
+        sharedPreferences.edit()
+            .remove(KEY_USUARIO_ACTUAL)
+            .putBoolean(KEY_SESION_ACTIVA, false)
+            .apply()
+    }
+
+    fun haySesionActiva(): Boolean {
+        return sharedPreferences.getBoolean(KEY_SESION_ACTIVA, false)
+    }
+    /**
+     * Elimina un valor de forma segura de las preferencias encriptadas
+     * @param key Clave del valor a eliminar
+     */
+    fun guardarTokenNotificaciones(token: String) {
+        sharedPreferences.edit()
+            .putString(KEY_TOKEN_NOTIFICACIONES, token)
+            .apply()
+    }
+    /**
+     * Verifica si existe una clave en las preferencias encriptadas
+     * @param key Clave a verificar
+     * @return true si la clave existe, false en caso contrario
+     */
+    fun obtenerTokenNotificaciones(): String? {
+        return sharedPreferences.getString(KEY_TOKEN_NOTIFICACIONES, null)
+    }
+}
+```
+# FormatearTiempo.kt
+```
+package mx.edu.utng.mrs.mycomunidad.utilidades
+
+import java.util.concurrent.TimeUnit
+/**
+ * Utilidad para formatear fechas y tiempos de manera consistente en la aplicación
+ *
+ * @property locale Configuración regional para el formateo (por defecto español de México)
+ */
+object FormateadorTiempo {
+    /**
+     * Formatea una fecha en un patrón específico
+     * @param fecha Fecha a formatear
+     * @param patron Patrón de formato (ej: "dd/MM/yyyy", "yyyy-MM-dd HH:mm:ss")
+     * @return String formateado según el patrón
+     */
+    fun obtenerTiempoTranscurrido(tiempoMillis: Long): String {
+        val ahora = System.currentTimeMillis()
+        val diferencia = ahora - tiempoMillis
+        /**
+         * Convierte una fecha a un formato amigable para el usuario (ej: "Hace 2 horas")
+         * @param fecha Fecha a convertir
+         * @return String con formato amigable para el usuario
+         */
+        return when {
+            diferencia < TimeUnit.MINUTES.toMillis(1) -> "Hace un momento"
+            diferencia < TimeUnit.HOURS.toMillis(1) -> {
+                val minutos = TimeUnit.MILLISECONDS.toMinutes(diferencia)
+                "Hace $minutos minuto${if (minutos > 1) "s" else ""}"
+            }
+            diferencia < TimeUnit.DAYS.toMillis(1) -> {
+                val horas = TimeUnit.MILLISECONDS.toHours(diferencia)
+                "Hace $horas hora${if (horas > 1) "s" else ""}"
+            }
+            diferencia < TimeUnit.DAYS.toMillis(7) -> {
+                val dias = TimeUnit.MILLISECONDS.toDays(diferencia)
+                "Hace $dias día${if (dias > 1) "s" else ""}"
+            }
+            else -> "Hace más de una semana"
+        }
+    }
+}
+```
+# GradientUtils
+```
+package mx.edu.utng.mrs.mycomunidad.utilidades
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.MaterialTheme
+/**
+ * Utilidad para aplicar gradientes a elementos de la UI, especialmente TextViews
+ *
+ * @property direcciones Map de direcciones de gradiente
+ */
+object GradientUtils {
+    /**
+     * Aplica un gradiente lineal a un TextView
+     * @param textView TextView al que se aplicará el gradiente
+     * @param colores Array de colores para el gradiente
+     * @param direccion Dirección del gradiente (por defecto izquierda a derecha)
+     */
+    @Composable
+    fun getPrimaryGradient(): Brush {
+        return Brush.linearGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.primary,
+                MaterialTheme.colorScheme.primaryContainer
+            )
+        )
+    }
+    /**
+     * Crea un gradiente de dos colores
+     * @param colorInicio Color inicial del gradiente
+     * @param colorFin Color final del gradiente
+     * @return IntArray con los dos colores
+     */
+    @Composable
+    fun getSecondaryGradient(): Brush {
+        return Brush.linearGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.secondary,
+                MaterialTheme.colorScheme.secondaryContainer
+            )
+        )
+    }
+    /**
+     * Crea un gradiente de múltiples colores
+     * @param colores Lista de colores para el gradiente
+     * @return IntArray con todos los colores
+     */
+    @Composable
+    fun getSurfaceGradient(): Brush {
+        return Brush.verticalGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.surface,
+                MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+    }
+
+    /**
+     * Aplica un gradiente predefinido (azul a morado) a un TextView
+     * @param textView TextView al que se aplicará el gradiente
+     */
+
+    @Composable
+    fun getBackgroundGradient(): Brush {
+        return Brush.verticalGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.background,
+                MaterialTheme.colorScheme.surface
+            )
+        )
+    }
+
+    // Estos no necesitan @Composable porque no usan MaterialTheme
+    fun getSuccessGradient(): Brush {
+        return Brush.linearGradient(
+            colors = listOf(
+                Color(0xFF10B981),
+                Color(0xFF059669)
+            )
+        )
+    }
+
+    /**
+     * Aplica un gradiente de éxito (verde) a un TextView
+     * @param textView TextView al que se aplicará el gradiente
+     */
+    fun getWarningGradient(): Brush {
+        return Brush.linearGradient(
+            colors = listOf(
+                Color(0xFFF59E0B),
+                Color(0xFFD97706)
+            )
+        )
+    }
+
+
+    /**
+     * Aplica un gradiente de error (rojo) a un TextView
+     * @param textView TextView al que se aplicará el gradiente
+     */
+    fun getErrorGradient(): Brush {
+        return Brush.linearGradient(
+            colors = listOf(
+                Color(0xFFEF4444),
+                Color(0xFFDC2626)
+            )
+        )
+    }
+}
+```
+# ManejadorCamaras.kt
+```
+package mx.edu.utng.mrs.mycomunidad.utilidades
+
+import android.app.Activity
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.MediaStore
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.InputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Utilidad para manejar operaciones de cámara y galería de fotos
+ *
+ * @property activity Actividad que utiliza el manejador
+ * @property fotoActualPath Ruta de la foto actual tomada
+ */
+
+class ManejadorCamara(private val context: Context) {
+    /**
+     * Verifica si la aplicación tiene permisos de cámara
+     * @return true si tiene permisos, false en caso contrario
+     */    private var uriFotoTemporal: Uri? = null
+
+    @Composable
+    fun recordatorioTomarFoto(
+        onFotoTomada: (ByteArray) -> Unit,
+        onError: (String) -> Unit
+    ): TomarFotoLauncher {
+        val actividad = LocalContext.current as ComponentActivity
+
+        val launcherCamara = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicture(),
+            onResult = { exito ->
+                if (exito) {
+                    uriFotoTemporal?.let { uri ->
+                        try {
+                            val inputStream = context.contentResolver.openInputStream(uri)
+                            val bytesFoto = inputStream?.leerBytes()
+                            if (bytesFoto != null) {
+                                onFotoTomada(bytesFoto)
+                            } else {
+                                onError("No se pudo leer la foto")
+                            }
+                        } catch (e: Exception) {
+                            onError("Error al procesar la foto: ${e.message}")
+                        } finally {
+                            eliminarFotoTemporal()
+                        }
+                    }
+                } else {
+                    onError("No se pudo tomar la foto")
+                }
+            }
+        )
+
+        val launcherGaleria = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+            onResult = { uri ->
+                if (uri != null) {
+                    try {
+                        val inputStream = context.contentResolver.openInputStream(uri)
+                        val bytesFoto = inputStream?.leerBytes()
+                        if (bytesFoto != null) {
+                            onFotoTomada(bytesFoto)
+                        } else {
+                            onError("No se pudo leer la imagen")
+                        }
+                    } catch (e: Exception) {
+                        onError("Error al procesar la imagen: ${e.message}")
+                    }
+                }
+            }
+        )
+
+        return remember {
+            TomarFotoLauncher(
+                onAbrirCamara = {
+                    try {
+                        uriFotoTemporal = crearArchivoFotoTemporal()
+                        launcherCamara.launch(uriFotoTemporal)
+                    } catch (e: Exception) {
+                        onError("Error al abrir la cámara: ${e.message}")
+                    }
+                },
+                onAbrirGaleria = {
+                    launcherGaleria.launch("image/*")
+                }
+            )
+        }
+    }
+
+    private fun crearArchivoFotoTemporal(): Uri {
+        val tiempo = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val nombreArchivo = "JPEG_${tiempo}_"
+        val directorio = context.externalCacheDir ?: context.cacheDir
+        val archivo = File.createTempFile(nombreArchivo, ".jpg", directorio)
+
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            archivo
+        )
+    }
+
+
+    /**
+     * Abre la cámara para tomar una foto
+     * @param launcher ActivityResultLauncher para manejar el resultado
+     * @return true si se pudo abrir la cámara, false en caso contrario
+     */private fun InputStream.leerBytes(): ByteArray {
+        return use { inputStream ->
+            ByteArrayOutputStream().use { outputStream ->
+                val buffer = ByteArray(1024)
+                var longitud: Int
+                while (inputStream.read(buffer).also { longitud = it } != -1) {
+                    outputStream.write(buffer, 0, longitud)
+                }
+                outputStream.toByteArray()
+            }
+        }
+    }
+
+    private fun eliminarFotoTemporal() {
+        uriFotoTemporal?.let { uri ->
+            try {
+                context.contentResolver.delete(uri, null, null)
+            } catch (e: Exception) {
+                // Ignorar error al eliminar archivo temporal
+            }
+        }
+        uriFotoTemporal = null
+    }
+}
+/**
+ * Guarda la foto en la galería del dispositivo
+ * @param rutaFoto Ruta del archivo de la foto
+ * @param descripcion Descripción de la foto para guardar en MediaStore
+ * @return Uri de la foto guardada en la galería o null si falló
+ */
+data class TomarFotoLauncher(
+    val onAbrirCamara: () -> Unit,
+    val onAbrirGaleria: () -> Unit
+)
+
+// Extensión para comprimir imagen si es muy grande
+fun ByteArray.comprimirImagen(maxSizeKB: Int = 500): ByteArray {
+    if (this.size <= maxSizeKB * 1024) {
+        return this
+    }
+
+    // Aquí podrías implementar compresión de imagen
+    // Por simplicidad, retornamos los bytes originales
+    // En una implementación real, usarías BitmapFactory para comprimir
+    return this
+}
+```
+# ManejadorMapas
+```
+package mx.edu.utng.mrs.mycomunidad.utilidades
+
+import android.content.Context
+import android.location.Geocoder
+import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import mx.edu.utng.mrs.mycomunidad.datos.modelo.Ubicacion
+import java.util.Locale
+/**
+ * Utilidad para manejar operaciones con mapas y navegación
+ *
+ * @property context Contexto de la aplicación
+ */
+class ManejadorMapas(private val context: Context) {
+
+    private val geocoder = Geocoder(context, Locale.getDefault())
+    /**
+     * Abre Google Maps con una ubicación específica
+     * @param latitud Coordenada de latitud
+     * @param longitud Coordenada de longitud
+     * @param etiqueta Etiqueta para mostrar en el marcador
+     * @return true si se pudo abrir Google Maps, false en caso contrario
+     */
+    suspend fun obtenerDireccionDesdeCoordenadas(latitud: Double, longitud: Double): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val direcciones = geocoder.getFromLocation(latitud, longitud, 1)
+                if (!direcciones.isNullOrEmpty()) {
+                    val direccion = direcciones[0]
+                    val calle = direccion.thoroughfare ?: ""
+                    val numero = direccion.subThoroughfare ?: ""
+                    val colonia = direccion.subLocality ?: ""
+                    val ciudad = direccion.locality ?: ""
+
+                    buildString {
+                        if (calle.isNotBlank()) append(calle)
+                        if (numero.isNotBlank()) append(" #$numero")
+                        if (colonia.isNotBlank()) append(", $colonia")
+                        if (ciudad.isNotBlank()) append(", $ciudad")
+                    }.ifBlank { "Ubicación seleccionada" }
+                } else {
+                    "Ubicación no encontrada"
+                }
+                /**
+                 * Abre cualquier aplicación de mapas disponible
+                 * @param latitud Coordenada de latitud
+                 * @param longitud Coordenada de longitud
+                 * @param etiqueta Etiqueta para mostrar
+                 * @return true si se pudo abrir alguna aplicación de mapas, false en caso contrario
+                 */
+            } catch (e: Exception) {
+                "Error obteniendo dirección: ${e.message}"
+            }
+        }
+    }
+    /**
+     * Abre Google Maps con direcciones desde la ubicación actual
+     * @param latitudDestino Latitud del destino
+     * @param longitudDestino Longitud del destino
+     * @param etiquetaDestino Etiqueta del destino
+     * @param modoTransporte Modo de transporte (driving, walking, bicycling, transit)
+     * @return true si se pudo abrir, false en caso contrario
+     */
+    suspend fun obtenerCoordenadasDesdeDireccion(direccion: String): LatLng? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val direcciones = geocoder.getFromLocationName(direccion, 1)
+                if (!direcciones.isNullOrEmpty()) {
+                    val ubicacion = direcciones[0]
+                    LatLng(ubicacion.latitude, ubicacion.longitude)
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    /**
+     * Calcula la distancia entre dos ubicaciones usando la fórmula del haversine
+     * @param ubicacion1 Primera ubicación
+     * @param ubicacion2 Segunda ubicación
+     * @return Distancia en kilómetros
+     */
+    fun calcularDistancia(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Double {
+        val radioTierra = 6371 // Radio de la Tierra en kilómetros
+
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+        return radioTierra * c
+    }
+    /**
+     * Formatea una distancia para mostrar de manera amigable
+     * @param distanciaKm Distancia en kilómetros
+     * @return String formateado (ej: "1.5 km" o "500 m")
+     */
+    fun crearUbicacion(latLng: LatLng, direccion: String): Ubicacion {
+        return Ubicacion(
+            latitud = latLng.latitude,
+            longitud = latLng.longitude,
+            direccion = direccion
+        )
+    }
+}
+```
+
 
 
 
